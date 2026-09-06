@@ -1,0 +1,15 @@
+# 构建产物
+build/
+*.dmg
+*.app
+
+# Swift / Xcode
+.DS_Store
+.swiftpm/
+*.o
+*.swiftmodule
+*.dSYM
+
+# 密钥（绝不入库）
+.env
+*.key
