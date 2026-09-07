@@ -68,25 +68,17 @@ jobs:
           foreach ($tf in $targetsFiles) {
             $content = Get-Content $tf.FullName -Raw
             if ($content -match 'ExpandPriContent') {
-              Write-Host "patching $($tf.FullName)"
-              # 关键:第 914 行是「内联 task 元素」形式:
-              #   <ExpandPriContent Condition="..." Inputs="..." ...>
-              #     <Output ... />
-              #   </ExpandPriContent>
-              # 不是 <CallTarget Targets="ExpandPriContent" />。
-              # 所以用最暴力的字符串替换:把整个文件里所有 "ExpandPriContent"
-              # 这个 token 直接换成 "NoOpSkipPri"。
-              # 这样:
-              #   1. <ExpandPriContent ...>  → <NoOpSkipPri ...>  (内联 task)
-              #   2. </ExpandPriContent>     → </NoOpSkipPri>
-              #   3. <UsingTask TaskName="...ExpandPriContent"> → "...NoOpSkipPri"
-              # 而 csproj 里定义了 <Target Name="NoOpSkipPri" /> 作为 no-op。
-              $patched = $content -replace 'ExpandPriContent', 'NoOpSkipPri'
-              Set-Content -Path $tf.FullName -Value $patched -NoNewline
+              Write-Host "清空 $($tf.FullName)"
+              # unpackaged 应用不需要 MRT/PRI 资源。把整个 MrtCore.PriGen.targets
+              # 文件内容清空(只留一个 XML 注释),这样:
+              #   - <UsingTask ... Pri.Tasks.ExpandPriContent> 不再被加载(根因:这个
+              #     dll 在 GitHub Actions runner 上根本不存在,MSBuild 加载失败 MSB4062)
+              #   - <ExpandPriContent> 内联 task 调用也一并消失
+              Set-Content -Path $tf.FullName -Value '<?xml version="1.0" encoding="utf-8"?><!-- MRT PRI generation disabled for unpackaged app -->' -NoNewline
               $patchedCount++
             }
           }
-          Write-Host "✅ patch 完成,$patchedCount 个文件被修改"
+          Write-Host "✅ 已清空 $patchedCount 个 MrtCore.PriGen.targets 文件"
 
       - name: 编译(必须零错误)
         working-directory: Windows
