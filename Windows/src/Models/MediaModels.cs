@@ -7,14 +7,14 @@ public enum MediaKind { Audio, Video, Image }
 
 public sealed class MediaItem
 {
-    public string Id { get; init; } = Guid.NewGuid().ToString("N");
-    public required string Name { get; init; }
-    public required string LocalPath { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Name { get; set; } = "";
+    public string LocalPath { get; set; } = "";
     public string? RemoteUrl { get; set; }
-    public MediaKind Kind { get; init; }
-    public DateTime AddedAt { get; init; } = DateTime.Now;
+    public MediaKind Kind { get; set; } = MediaKind.Video;
+    public DateTime AddedAt { get; set; } = DateTime.Now;
     public double DurationSeconds { get; set; }
-    public string? VoiceId { get; set; }   // 音色 ID(TTS 用)
+    public string? VoiceId { get; set; }   // 音色 ID
     public string? TaskId { get; set; }     // DashScope 视频任务 ID
 }
 
