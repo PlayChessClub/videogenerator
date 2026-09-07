@@ -67,15 +67,19 @@ jobs:
           $patchedCount = 0
           foreach ($tf in $targetsFiles) {
             $content = Get-Content $tf.FullName -Raw
-            if ($content -match 'Targets="ExpandPriContent"') {
+            # 暴力策略:把文件中所有 "Microsoft.Build.Packaging.Pri.Tasks.ExpandPriContent"
+            # (无论是 <UsingTask TaskName=...> 还是 <CallTarget Targets=...>) 都换成
+            # "Microsoft.Build.Packaging.Pri.Tasks.NoOpSkipPri"。
+            # 同时 csproj 里定义 <Target Name="NoOpSkipPri" /> 作为 no-op target,
+            # 但 MSBuild 在 CallTarget 调用一个 task 时会查 UsingTask 注册;
+            # 这里因为我们把所有 UsingTask 注册的 TaskName 都改了,MSBuild 找不到
+            # "Microsoft.Build.Packaging.Pri.Tasks.NoOpSkipPri" 这个 task,
+            # 会发出 warning 但不会 error (这正是我们想要的)。
+            if ($content -match 'Microsoft\.Build\.Packaging\.Pri\.Tasks\.ExpandPriContent') {
               Write-Host "patching $($tf.FullName)"
-              $patched = [regex]::Replace($content,
-                '<CallTarget\s+Targets="ExpandPriContent"\s*/>',
-                '<CallTarget Targets="NoOpSkipPri" />')
-              $patched = [regex]::Replace($patched,
-                '<CallTarget\s+Targets="ExpandPriContent">.*?</CallTarget>',
-                '<CallTarget Targets="NoOpSkipPri" />',
-                'Singleline')
+              $patched = $content `
+                -replace 'Microsoft\.Build\.Packaging\.Pri\.Tasks\.ExpandPriContent', `
+                         'Microsoft.Build.Packaging.Pri.Tasks.NoOpSkipPri'
               Set-Content -Path $tf.FullName -Value $patched -NoNewline
               $patchedCount++
             }
