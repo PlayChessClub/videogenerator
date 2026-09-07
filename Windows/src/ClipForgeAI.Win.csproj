@@ -21,17 +21,12 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishSingleFile>false</PublishSingleFile>
-    <!-- unpackaged 应用不需要 MRT 资源索引,关掉可绕开 GitHub Actions windows-latest
-         上 .NET 10 SDK + VS v18 路径缺 Microsoft.Build.Packaging.Pri.Tasks.dll 的问题 -->
-    <EnableMrtResourceIndexer>false</EnableMrtResourceIndexer>
-    <EnableDefaultPriItems>false</EnableDefaultPriItems>
-    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Product>ClipForge · AI 视频编辑助手</Product>
     <Company>ClipForge</Company>
-    <Version>2.0.0</Version>
-    <FileVersion>2.0.0.0</FileVersion>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <Version>2.0.1</Version>
+    <FileVersion>2.0.1.0</FileVersion>
+    <AssemblyVersion>2.0.1.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,15 +38,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\**\*.*" />
+    <Content Include="Assets\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <None Remove="Assets\**\*.*" />
   </ItemGroup>
-
-  <!-- 覆盖 WinAppSDK 1.6 MrtCore.PriGen.targets 里的 ExpandPriContent 任务(双保险)。
-       CI workflow 里的 patch 步骤会把 MrtCore.PriGen.targets 里所有
-       <CallTarget Targets="ExpandPriContent" /> 改写成 <CallTarget Targets="NoOpSkipPri" />,
-       这里定义的 NoOpSkipPri 是一个空的 no-op target,这样就完全不需要 Pri.Tasks.dll。
-       本地 Windows 编译(没跑 workflow)不需要这个 target,但写了不影响。 -->
-  <Target Name="ExpandPriContent" />
-  <Target Name="NoOpSkipPri" />
 
 </Project>
