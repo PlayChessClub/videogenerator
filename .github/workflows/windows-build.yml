@@ -26,7 +26,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x64, ARM64]
+      # PlatformTarget 需要首字母大写(x64 / ARM64),但 RuntimeIdentifier 需要全小写
+      # (win-x64 / win-arm64)。分开定义避免大小写错。
+      include:
+        - arch: x64
+          rid: win-x64
+        - arch: ARM64
+          rid: win-arm64
 
     steps:
       - uses: actions/checkout@v4
@@ -83,7 +89,7 @@ jobs:
 
       - name: 编译(必须零错误)
         working-directory: Windows
-        run: dotnet build src/ClipForgeAI.Win.csproj -c Release -r win-${{ matrix.arch }} -p:Platform=${{ matrix.arch }} --no-restore
+        run: dotnet build src/ClipForgeAI.Win.csproj -c Release -r ${{ matrix.rid }} -p:Platform=${{ matrix.arch }} --no-restore
 
       - name: 发布(自包含 + Windows App SDK 运行时)
         working-directory: Windows
@@ -91,7 +97,7 @@ jobs:
           $out = "publish/${{ matrix.arch }}"
           if (Test-Path $out) { Remove-Item $out -Recurse -Force }
           dotnet publish src/ClipForgeAI.Win.csproj `
-            -c Release -r win-${{ matrix.arch }} `
+            -c Release -r ${{ matrix.rid }} `
             -p:Platform=${{ matrix.arch }} `
             -p:WindowsAppSDKSelfContained=true `
             -p:SelfContained=true `
