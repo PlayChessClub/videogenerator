@@ -40,9 +40,47 @@ jobs:
         shell: pwsh
         run: dotnet nuget locals all --clear
 
-      - name: 还原依赖
+      # GitHub Actions windows-2022 runner 缺 Microsoft.Build.Packaging.Pri.Tasks.dll
+      # (v17.0/AppxPackage/ 目录不存在)。WinAppSDK 1.6 的 MrtCore.PriGen.targets
+      # 调用 ExpandPriContent 任务会触发 MSB4062。
+      # 解决方案:在 nuget 还原之前,先清空 WinAppSDK 缓存;还原之后 patch 它的
+      # MrtCore.PriGen.targets,把所有 ExpandPriContent 调用改成 NoOpSkipPri
+      # (一个 csproj 里的 no-op target)。
+      - name: 预清空 WinAppSDK NuGet 缓存
+        shell: pwsh
+        run: |
+          $cacheRoot = "$env:USERPROFILE\.nuget\packages\microsoft.windowsappsdk"
+          if (Test-Path $cacheRoot) { Remove-Item $cacheRoot -Recurse -Force }
+          Write-Host "已清空 WinAppSDK NuGet 缓存"
+
+      - name: 还原依赖 + patch WinAppSDK targets
         working-directory: Windows
-        run: dotnet restore src/ClipForgeAI.Win.csproj
+        shell: pwsh
+        run: |
+          dotnet restore src/ClipForgeAI.Win.csproj
+          Write-Host "✅ 还原完成"
+
+          $targetsFiles = Get-ChildItem `
+            -Path "$env:USERPROFILE\.nuget\packages\microsoft.windowsappsdk" `
+            -Filter 'MrtCore.PriGen.targets' `
+            -Recurse -ErrorAction SilentlyContinue
+          $patchedCount = 0
+          foreach ($tf in $targetsFiles) {
+            $content = Get-Content $tf.FullName -Raw
+            if ($content -match 'Targets="ExpandPriContent"') {
+              Write-Host "patching $($tf.FullName)"
+              $patched = [regex]::Replace($content,
+                '<CallTarget\s+Targets="ExpandPriContent"\s*/>',
+                '<CallTarget Targets="NoOpSkipPri" />')
+              $patched = [regex]::Replace($patched,
+                '<CallTarget\s+Targets="ExpandPriContent">.*?</CallTarget>',
+                '<CallTarget Targets="NoOpSkipPri" />',
+                'Singleline')
+              Set-Content -Path $tf.FullName -Value $patched -NoNewline
+              $patchedCount++
+            }
+          }
+          Write-Host "✅ patch 完成,$patchedCount 个文件被修改"
 
       - name: 编译(必须零错误)
         working-directory: Windows

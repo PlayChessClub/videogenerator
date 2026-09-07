@@ -46,11 +46,12 @@
     <Content Include="Assets\**\*.*" />
   </ItemGroup>
 
-  <!-- 覆盖 WinAppSDK 1.6 MrtCore.PriGen.targets 里的 ExpandPriContent 任务。
-       GitHub Actions windows-2022 runner 装了 .NET 8 SDK,但 Visual Studio v17.0/AppxPackage/
-       目录不存在(Microsoft.Build.Packaging.Pri.Tasks.dll 缺失)。
-       unpackaged 应用不需要 PRI 资源,让 task 空跑即可。
-       Target 必须在 PropertyGroup 外,且放在最后才生效(后定义覆盖前定义)。 -->
+  <!-- 覆盖 WinAppSDK 1.6 MrtCore.PriGen.targets 里的 ExpandPriContent 任务(双保险)。
+       CI workflow 里的 patch 步骤会把 MrtCore.PriGen.targets 里所有
+       <CallTarget Targets="ExpandPriContent" /> 改写成 <CallTarget Targets="NoOpSkipPri" />,
+       这里定义的 NoOpSkipPri 是一个空的 no-op target,这样就完全不需要 Pri.Tasks.dll。
+       本地 Windows 编译(没跑 workflow)不需要这个 target,但写了不影响。 -->
   <Target Name="ExpandPriContent" />
+  <Target Name="NoOpSkipPri" />
 
 </Project>
