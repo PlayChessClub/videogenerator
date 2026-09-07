@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipForge · AI 视频编辑助手</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="aurora"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">CF</div>
+      <div class="brand-text">
+        <div class="brand-title">ClipForge</div>
+        <div class="brand-subtitle">AI 视频编辑助手</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="voice">声音工坊</button>
+      <button class="tab" data-tab="video">视频工坊</button>
+      <button class="tab" data-tab="settings">设置</button>
+    </nav>
+  </header>
+
+  <main class="content">
+
+    <!-- 声音工坊 -->
+    <section class="panel active" id="voice">
+      <h2>声音克隆</h2>
+      <div class="card">
+        <label class="field">
+          <span>音色前缀(英文,如 myvoice)</span>
+          <input type="text" id="voice-prefix" value="myvoice" placeholder="myvoice">
+        </label>
+
+        <label class="field">
+          <span>参考音频(wav / mp3 / m4a)</span>
+          <div class="file-row">
+            <button class="btn" id="voice-pick">选择音频…</button>
+            <span class="file-name" id="voice-filename">未选择</span>
+          </div>
+          <input type="file" id="voice-file" accept=".wav,.mp3,.m4a" hidden>
+        </label>
+
+        <button class="btn primary" id="voice-clone">开始克隆</button>
+        <p class="status" id="voice-status"></p>
+      </div>
+
+      <h2>已有音色</h2>
+      <div class="card">
+        <div class="row">
+          <select id="voice-list" class="select"><option>— 加载中 —</option></select>
+          <button class="btn" id="voice-refresh">刷新</button>
+        </div>
+        <p class="hint">
+          注:TTS 实时合成需要 WebSocket 全双工协议,本版本未集成,
+          克隆好的 voice_id 可用于阿里云控制台、Python SDK 或其他客户端做语音合成。
+        </p>
+      </div>
+    </section>
+
+    <!-- 视频工坊 -->
+    <section class="panel" id="video">
+      <h2>图生视频 · wan2.6-i2v</h2>
+      <div class="card">
+        <label class="field">
+          <span>提示词(描述要生成的画面)</span>
+          <textarea id="video-prompt" rows="4"
+            placeholder="例:一只橘猫在窗台上看雨,微风轻拂窗帘,慢镜头"></textarea>
+        </label>
+
+        <label class="field">
+          <span>参考图(可选,无则纯文生视频)</span>
+          <div class="file-row">
+            <button class="btn" id="video-pick-image">选择图片…</button>
+            <span class="file-name" id="video-image-name">未选择</span>
+          </div>
+          <input type="file" id="video-image" accept=".png,.jpg,.jpeg,.webp" hidden>
+        </label>
+
+        <label class="field">
+          <span>参考音频(可选)</span>
+          <div class="file-row">
+            <button class="btn" id="video-pick-audio">选择音频…</button>
+            <span class="file-name" id="video-audio-name">未选择</span>
+          </div>
+          <input type="file" id="video-audio" accept=".mp3,.wav,.m4a" hidden>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span>分辨率</span>
+            <select id="video-resolution" class="select">
+              <option value="720P">720P</option>
+              <option value="1080P">1080P</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>时长(秒)</span>
+            <select id="video-duration" class="select">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>镜头</span>
+            <select id="video-shottype" class="select">
+              <option value="multi" selected>多镜头</option>
+              <option value="single">单镜头</option>
+            </select>
+          </label>
+          <label class="field checkbox">
+            <input type="checkbox" id="video-extend" checked>
+            <span>AI 提示词增强</span>
+          </label>
+        </div>
+
+        <button class="btn primary" id="video-submit">开始生成视频</button>
+        <p class="status" id="video-status"></p>
+        <div id="video-result" class="result"></div>
+      </div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="panel" id="settings">
+      <h2>设置</h2>
+      <div class="card">
+        <label class="field">
+          <span>DashScope API Key</span>
+          <input type="password" id="settings-key" placeholder="sk-...">
+        </label>
+        <p class="hint" id="settings-status">未配置</p>
+        <div class="row">
+          <button class="btn primary" id="settings-save">保存到本地</button>
+          <button class="btn danger" id="settings-clear">清除</button>
+        </div>
+        <p class="hint">
+          存储路径:&lt;系统用户配置目录&gt;/ClipForge/settings.yml,明文,请勿分享。
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    ClipForge v2.0.0 · DashScope cosyvoice-v3.5-plus + wan2.6-i2v
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+name: build-web
+
+on:
+  push:
+    tags:
+      - 'v*'
+    paths:
+      - 'web/**'
+      - '.github/workflows/build-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 编译 ClipForge (${{ matrix.os }} ${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            goos: windows
+            goarch: amd64
+            ext: .exe
+          - os: windows
+            arch: arm64
+            goos: windows
+            goarch: arm64
+            ext: .exe
+          - os: macos
+            arch: arm64
+            goos: darwin
+            goarch: arm64
+            ext: ''
+          - os: macos
+            arch: amd64
+            goos: darwin
+            goarch: amd64
+            ext: ''
+          - os: linux
+            arch: amd64
+            goos: linux
+            goarch: amd64
+            ext: ''
+
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23.x
+
+      - name: 编译
+        working-directory: web/server
+        run: |
+          go build -ldflags="-s -w" -o ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
+          ls -la ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+      - name: 打包(把 static 内嵌到同目录)
+        shell: bash
+        run: |
+          mkdir -p release
+          mkdir -p release/clipforge-${{ matrix.os }}-${{ matrix.arch }}
+          cp clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} release/clipforge-${{ matrix.os }}-${{ matrix.arch }}/
+          cp -r ../static release/clipforge-${{ matrix.os }}-${{ matrix.arch }}/
+          cd release
+          zip -r clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip clipforge-${{ matrix.os }}-${{ matrix.arch }}/
+          ls -la clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip
+
+      - name: 上传 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clipforge-${{ matrix.os }}-${{ matrix.arch }}
+          path: web/release/clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: 发布 Release
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: 确认 zip 齐全
+        working-directory: artifacts
+        run: |
+          ls -la
+          for f in clipforge-windows-amd64 clipforge-windows-arm64 clipforge-macos-arm64 clipforge-macos-amd64 clipforge-linux-amd64; do
+            [ -f "$f.zip" ] || { echo "❌ 缺 $f.zip"; exit 1; }
+          done
+          echo "✅ 全部 zip 齐全"
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "ClipForge ${{ github.ref_name }}"
+          generate_release_notes: true
+          # 跨平台都发,新版不需要 make_latest: false
+          fail_on_unmatched_files: false
+          files: |
+            artifacts/clipforge-windows-amd64.zip
+            artifacts/clipforge-windows-arm64.zip
+            artifacts/clipforge-macos-arm64.zip
+            artifacts/clipforge-macos-amd64.zip
+            artifacts/clipforge-linux-amd64.zip
+          body: |
+            ## ClipForge · ${{ github.ref_name }}
+
+            AI 视频编辑助手 v2.0 - **全新 Go + HTML5 重写版**。
+
+            旧版 WinUI 3 在虚拟机/裸 dotnet CLI 打包环境里有太多坑,
+            这一版改用 Go 单文件后端 + HTML/CSS/JS 前端,
+            跨 Windows / macOS / Linux,启动即用,体积小。
+
+            ### 下载
+
+            - **Windows amd64**:大多数 Intel/AMD 桌面和笔记本
+            - **Windows ARM64**:Surface Pro X、骁龙本等 ARM 设备
+            - **macOS Apple Silicon**:M1/M2/M3 等
+            - **macOS Intel**:2019 前的 Mac
+            - **Linux amd64**:常见发行版
+
+            ### 使用
+
+            1. 解压 zip
+            2. 双击 `clipforge.exe`(或 macOS/Linux 双击 `clipforge`)
+            3. 浏览器自动打开 http://127.0.0.1:8731
+            4. 在「设置」填入 DashScope API Key
+            5. 开始用
+
+            ### 功能
+
+            - 声音克隆(cosyvoice-v3.5-plus)
+            - 图生视频(wan2.6-i2v)
+            - API Key 存本地明文 yml(请勿分享)
