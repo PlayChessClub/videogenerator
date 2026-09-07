@@ -1,28 +1,34 @@
 // ClipForge 后端 - Go 单文件 HTTP server
-// 1. 静态文件服务(static/) - 前端 SPA
+// 1. 静态文件服务(前端 SPA,已用 go:embed 内嵌进二进制,单 exe 即可运行)
 // 2. DashScope API 代理 - 把 API Key 保存在本地,前端不直接拿 Key
 // 3. 轮询视频任务状态
 // 4. 上传本地音频/图片到 DashScope OSS
 //
-// 编译: go build -o clipforge.exe main.go
+// 编译: go build -ldflags="-s -w" -o clipforge.exe .
 // 运行: ./clipforge.exe
 // 浏览器自动打开: http://127.0.0.1:8731
 package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 )
+
+//go:embed static
+var staticFS embed.FS
 
 // ============================================================
 // 配置
@@ -34,13 +40,8 @@ const (
 	configFile = "settings.yml"
 )
 
-// 静态文件目录:可被环境变量 STATIC_DIR 覆盖,默认与二进制同级 static/
-var staticDir = func() string {
-	if v := os.Getenv("STATIC_DIR"); v != "" {
-		return v
-	}
-	return "static"
-}()
+// 内嵌静态文件子系统(static/)
+var embeddedStatic, _ = fs.Sub(staticFS, "static")
 
 // ============================================================
 // 配置管理(settings.yml 明文,用户自己保管)
@@ -269,28 +270,17 @@ func uploadLocalFile(w http.ResponseWriter, r *http.Request) {
 
 // 跨平台打开默认浏览器
 func openBrowser(url string) {
-	// 用一个短超时 goroutine 启动浏览器,不阻塞主线程
 	go func() {
-		var cmd *exec.Cmd
-		switch {
-		case fileExists("/Applications/Google Chrome.app") || isMac():
+		switch runtime.GOOS {
+		case "darwin":
 			_ = exec.Command("open", url).Start()
-		case isWindows():
+		case "windows":
 			_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 		default:
 			_ = exec.Command("xdg-open", url).Start()
 		}
-		_ = cmd
 	}()
 }
-
-func fileExists(p string) bool {
-	_, err := os.Stat(p)
-	return err == nil
-}
-
-func isMac() bool     { return os.PathSeparator == '/' && fileExists("/System") }
-func isWindows() bool { return os.PathSeparator == '\\' || fileExists("C:\\Windows") }
 
 // ============================================================
 // 路由
@@ -302,8 +292,8 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// 静态文件
-	mux.Handle("/", http.FileServer(http.Dir(staticDir)))
+	// 静态文件(内嵌在二进制里,无需外部 static/ 目录)
+	mux.Handle("/", http.FileServer(http.FS(embeddedStatic)))
 
 	// 配置
 	mux.HandleFunc("/api/config", func(w http.ResponseWriter, r *http.Request) {

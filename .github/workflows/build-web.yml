@@ -64,16 +64,13 @@ jobs:
           go build -ldflags="-s -w" -o ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
           ls -la ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
 
-      - name: 打包(把 static 内嵌到同目录)
+      - name: 打包(单文件,前端已内嵌)
         shell: bash
         run: |
-          mkdir -p release
-          mkdir -p release/clipforge-${{ matrix.os }}-${{ matrix.arch }}
-          cp clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} release/clipforge-${{ matrix.os }}-${{ matrix.arch }}/
-          cp -r ../static release/clipforge-${{ matrix.os }}-${{ matrix.arch }}/
-          cd release
-          zip -r clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip clipforge-${{ matrix.os }}-${{ matrix.arch }}/
-          ls -la clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip
+          mkdir -p web/release
+          zip -j web/release/clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip \
+            clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+          ls -la web/release/clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip
 
       - name: 上传 artifact
         uses: actions/upload-artifact@v4
