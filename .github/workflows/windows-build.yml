@@ -69,37 +69,24 @@ jobs:
             $content = Get-Content $tf.FullName -Raw
             if ($content -match 'ExpandPriContent') {
               Write-Host "patching $($tf.FullName)"
-              # 第一步:把 UsingTask 注册的完整限定名 task 名改成 NoOpSkipPri
-              #   <UsingTask TaskName="Microsoft.Build.Packaging.Pri.Tasks.ExpandPriContent" ...>
-              #   → <UsingTask TaskName="Microsoft.Build.Packaging.Pri.Tasks.NoOpSkipPri" ...>
-              $patched = $content `
-                -replace 'Microsoft\.Build\.Packaging\.Pri\.Tasks\.ExpandPriContent', `
-                         'Microsoft.Build.Packaging.Pri.Tasks.NoOpSkipPri'
-
-              # 第二步:把 <CallTarget Targets="ExpandPriContent" /> 也改成 NoOpSkipPri
-              # 这样 MSBuild 找名为 NoOpSkipPri 的 target（csproj 里定义为 no-op）
-              $patched = [regex]::Replace($patched,
-                'Targets="ExpandPriContent"',
-                'Targets="NoOpSkipPri"',
-                'IgnoreCase')
-
+              # 关键:第 914 行是「内联 task 元素」形式:
+              #   <ExpandPriContent Condition="..." Inputs="..." ...>
+              #     <Output ... />
+              #   </ExpandPriContent>
+              # 不是 <CallTarget Targets="ExpandPriContent" />。
+              # 所以用最暴力的字符串替换:把整个文件里所有 "ExpandPriContent"
+              # 这个 token 直接换成 "NoOpSkipPri"。
+              # 这样:
+              #   1. <ExpandPriContent ...>  → <NoOpSkipPri ...>  (内联 task)
+              #   2. </ExpandPriContent>     → </NoOpSkipPri>
+              #   3. <UsingTask TaskName="...ExpandPriContent"> → "...NoOpSkipPri"
+              # 而 csproj 里定义了 <Target Name="NoOpSkipPri" /> 作为 no-op。
+              $patched = $content -replace 'ExpandPriContent', 'NoOpSkipPri'
               Set-Content -Path $tf.FullName -Value $patched -NoNewline
               $patchedCount++
             }
           }
           Write-Host "✅ patch 完成,$patchedCount 个文件被修改"
-
-          # 验证: dump patch 后 MrtCore.PriGen.targets 第 900-930 行内容,看 ExpandPriContent 是否被替换
-          $tf = "$env:USERPROFILE\.nuget\packages\microsoft.windowsappsdk\1.6.241114003\buildTransitive\MrtCore.PriGen.targets"
-          if (Test-Path $tf) {
-            Write-Host "---patch 后文件第 900-930 行---"
-            $lines = Get-Content $tf
-            $start = [Math]::Max(0, 899)
-            $end = [Math]::Min($lines.Count - 1, 929)
-            for ($i = $start; $i -le $end; $i++) {
-              Write-Host "$($i+1): $($lines[$i])"
-            }
-          }
 
       - name: 编译(必须零错误)
         working-directory: Windows
