@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ClipForgeAI.Win.Views.VideoStudioPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="20" MaxWidth="900" HorizontalAlignment="Left">
+            <TextBlock Text="视频工坊(图生视频 · wan2.6-i2v)" FontSize="28" FontWeight="SemiBold"/>
+
+            <TextBox x:Name="TxtPrompt" Header="提示词"
+                     PlaceholderText="描述你想让 AI 生成的画面,例如:一只橘猫在窗台上看雨"
+                     AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100"/>
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <StackPanel Spacing="4" MinWidth="200">
+                    <TextBlock Text="参考图(可选)"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="选择图片…" Click="OnPickImage"/>
+                        <TextBlock x:Name="TxtImagePath" VerticalAlignment="Center" Opacity="0.6"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Spacing="4" MinWidth="200">
+                    <TextBlock Text="参考音频(可选)"/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="选择音频…" Click="OnPickAudio"/>
+                        <TextBlock x:Name="TxtAudioPath" VerticalAlignment="Center" Opacity="0.6"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <StackPanel Spacing="4" MinWidth="160">
+                    <TextBlock Text="分辨率"/>
+                    <ComboBox x:Name="CmbResolution" SelectedIndex="0">
+                        <ComboBoxItem Content="720P"/>
+                        <ComboBoxItem Content="1080P"/>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="4" MinWidth="160">
+                    <TextBlock Text="时长(秒)"/>
+                    <ComboBox x:Name="CmbDuration" SelectedIndex="0">
+                        <ComboBoxItem Content="5"/>
+                        <ComboBoxItem Content="10"/>
+                        <ComboBoxItem Content="15"/>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="4" MinWidth="160">
+                    <TextBlock Text="镜头类型"/>
+                    <ComboBox x:Name="CmbShotType" SelectedIndex="0">
+                        <ComboBoxItem Content="single"/>
+                        <ComboBoxItem Content="multi"/>
+                    </ComboBox>
+                </StackPanel>
+                <CheckBox x:Name="ChkPromptExtend" Content="AI 提示词增强" IsChecked="True" VerticalAlignment="Bottom"/>
+            </StackPanel>
+
+            <Button x:Name="BtnSubmit" Content="开始生成视频"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="OnSubmit"
+                    HorizontalAlignment="Left" MinWidth="160"/>
+
+            <ProgressBar x:Name="PbVideo" Visibility="Collapsed" IsIndeterminate="True"/>
+            <TextBlock x:Name="TxtStatus" Opacity="0.8" TextWrapping="Wrap"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

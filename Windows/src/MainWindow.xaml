@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="ClipForgeAI.Win.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="RootGrid" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 自定义标题栏(让 Mica 背景穿透到顶部) -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="44" VerticalAlignment="Top">
+            <TextBlock x:Name="AppTitleText"
+                       Text="ClipForge · AI 视频编辑助手"
+                       VerticalAlignment="Center"
+                       Margin="48,0,0,0"
+                       FontSize="13"
+                       FontWeight="SemiBold"/>
+        </Grid>
+
+        <Frame x:Name="RootFrame"
+               Grid.Row="1"
+               Loaded="OnRootFrameLoaded"/>
+    </Grid>
+</Window>

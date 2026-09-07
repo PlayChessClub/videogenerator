@@ -1,8 +1,13 @@
 # ClipForge · AI 视频编辑助手
 
-一款 macOS AI 视频编辑辅助软件，采用 **Liquid Glass（液态玻璃）** SwiftUI 视觉语言，向后兼容 **macOS 11（Big Sur）及以上**，同时提供 Apple Silicon（arm64）与 Intel（x86_64）通用二进制。在 macOS 26 上呈现真·液态玻璃材质，在低版本系统自动退化为 NSVisualEffectView 毛玻璃。后端固定对接阿里云 DashScope 的两个模型，API Key 可在应用内随时更换。
+一款跨平台 AI 视频编辑辅助软件：
 
-> ⚠️ 模型固定、不可切换，以保证兼容性；唯一可配置项是 DashScope API Key。
+- **macOS**：采用 **Liquid Glass** SwiftUI 视觉语言，向后兼容 **macOS 11（Big Sur）及以上**，Apple Silicon（arm64）+ Intel（x86_64）通用二进制。在 macOS 26 上呈现真·液态玻璃材质，在低版本系统自动退化为 NSVisualEffectView 毛玻璃。
+- **Windows 11**：采用 **WinUI 3 + .NET 8 + Mica** 系统原生材质（WinUI 3 中 Mica 之于 Windows 相当于 Liquid Glass 之于 macOS）。同时提供 x64 与 ARM64 自包含发布。
+
+后端固定对接阿里云 DashScope 的两个模型，API Key 可在应用内随时更换。
+
+> ⚠️ 模型固定、不可切换，以保证跨平台行为一致；唯一可配置项是 DashScope API Key。
 
 ## 功能
 
@@ -39,25 +44,75 @@
 
 生成结果默认输出到 `~/Downloads/ClipForge/`。
 
+## Windows 11 版本
+
+源码在 `Windows/`，**根命名空间为 `ClipForgeAI.Win`**（避开 `ClipForgeAI.Windows` 与系统 `Windows.*` 命名空间冲突）。WinUI 3 + .NET 8 + Windows App SDK 1.6。
+
+主要差异（与 macOS 客户端）：
+- API Key 存于 Windows **DPAPI** 加密的本地文件（`%APPDATA%\ClipForge\settings.dat`），等价于 macOS Keychain
+- 背景材质用 Mica（Win11 22H2+），自动回退 Acrylic
+- 工程名 `ClipForgeAI.Win.csproj`，不用 sln 也可以
+
+### 本地编译
+
+```powershell
+cd Windows
+dotnet restore src\ClipForgeAI.Win.csproj
+dotnet build   src\ClipForgeAI.Win.csproj -c Release -p:Platform=x64
+dotnet run     --project src\ClipForgeAI.Win.csproj -c Debug -p:Platform=x64
+```
+
+或者用 Visual Studio 2022 17.10+ 打开 `Windows\ClipForgeAI.Win.sln`，F5。
+
+### GitHub Actions 自动编译
+
+根目录 `.github/workflows/windows-build.yml` 已经配好：
+- 触发：`push` 到 `Windows/**` 任意文件，或推送 `v*` tag，或手动 `workflow_dispatch`
+- matrix：**x64 + ARM64** 双架构并行
+- 产物：自包含（不依赖用户机装 .NET），打包成 `ClipForge-windows-x64.zip` / `ClipForge-windows-ARM64.zip`
+- tag 触发自动创建 GitHub Release 并上传双架构 zip
+
+发布新版本只需：
+```bash
+git tag v2.0.0-windows
+git push origin v2.0.0-windows
+```
+
 ## 项目结构
 
 ```
 ClipForge/
-├── Sources/
-│   ├── ClipForgeApp.swift      # App 入口、TabView、通用组件（Player / FilePicker）
-│   ├── Compat.swift            # 兼容层：glassEffect/NSVisualEffectView 双路径、网络/AVFoundation 版本抹平
-│   ├── GlassKit.swift          # Liquid Glass 视图组件（GlassCard / AuroraBackground …）
-│   ├── Models.swift            # 固定模型常量、AppSettings(钥匙串)、素材库
-│   ├── DashScopeClient.swift   # REST：OSS 上传 / 音色 / 视频任务 / 下载
-│   ├── CosyVoiceTTS.swift      # 全双工 WebSocket 语音合成
-│   ├── ExportEngine.swift      # AVFoundation 时间线拼接 / 配音导出
-│   ├── VoiceStudioView.swift   # 声音工作室页
-│   ├── VideoStudioView.swift   # 视频生成页
-│   ├── TimelineView.swift      # 剪辑时间线页
-│   └── SettingsView.swift      # 设置页
-├── Tools/MakeIcon.swift          # 应用图标生成器
-├── Tools/MakeDMGBackground.swift # DMG 安装窗口背景图生成器（紫青玻璃 + 弧形箭头）
-└── build.sh                      # 一键编译 + 打包 dmg（含 AppleScript 美化 Finder 窗口）
+├── Sources/                      # macOS 端 Swift 源码
+│   ├── ClipForgeApp.swift
+│   ├── Compat.swift              # 兼容层
+│   ├── GlassKit.swift            # Liquid Glass 组件
+│   ├── Models.swift
+│   ├── DashScopeClient.swift
+│   ├── CosyVoiceTTS.swift
+│   ├── ExportEngine.swift
+│   ├── VoiceStudioView.swift
+│   ├── VideoStudioView.swift
+│   ├── TimelineView.swift
+│   └── SettingsView.swift
+├── Tools/
+│   ├── MakeIcon.swift            # 应用图标生成器
+│   └── MakeDMGBackground.swift   # DMG 安装窗口背景图
+├── build.sh                      # macOS 一键编译 + 打包 dmg
+├── Windows/                      # Windows 11 端 .NET 源码
+│   ├── ClipForgeAI.Win.sln
+│   ├── README.md
+│   ├── docs/手动编译打包发布指南.md
+│   └── src/
+│       ├── ClipForgeAI.Win.csproj
+│       ├── App.xaml(.cs)         # 应用入口
+│       ├── MainWindow.xaml(.cs)  # Mica 主窗口
+│       ├── Models/MediaModels.cs
+│       ├── Services/             # DashScopeClient / CosyVoiceTtsService / VideoGenerationService / SettingsService
+│       ├── Views/                # 4 个页面(Shell/Voice/Video/Timeline/Settings)
+│       ├── Helpers/BindableBase.cs
+│       └── Assets/{app.png,app.ico}
+└── .github/workflows/
+    └── windows-build.yml         # Windows 自动编译 + Release
 ```
 
 ## 技术要点

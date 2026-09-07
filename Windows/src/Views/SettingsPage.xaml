@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ClipForgeAI.Win.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="20" MaxWidth="720" HorizontalAlignment="Left">
+            <TextBlock Text="设置" FontSize="28" FontWeight="SemiBold"/>
+
+            <TextBlock Text="DashScope API Key" FontWeight="SemiBold"/>
+            <PasswordBox x:Name="PbKey" PlaceholderText="sk-..."/>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="保存到本地(DPAPI 加密)" Click="OnSave"
+                        Style="{StaticResource AccentButtonStyle}"/>
+                <Button Content="清除" Click="OnDelete"/>
+            </StackPanel>
+            <TextBlock x:Name="TxtStatus" Opacity="0.8"/>
+
+            <TextBlock Text="固定模型(只读,跨平台与 macOS 客户端保持一致)" FontWeight="SemiBold" Margin="0,12,0,0"/>
+            <TextBlock x:Name="TxtTts" Opacity="0.8"/>
+            <TextBlock x:Name="TxtVoice" Opacity="0.8"/>
+            <TextBlock x:Name="TxtVideo" Opacity="0.8"/>
+
+            <TextBlock Text="输出目录" FontWeight="SemiBold" Margin="0,12,0,0"/>
+            <TextBlock x:Name="TxtOutDir" Opacity="0.8" IsTextSelectionEnabled="True"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

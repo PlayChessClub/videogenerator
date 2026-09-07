@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="ClipForgeAI.Win.Views.TimelinePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="12" Grid.Row="0">
+            <TextBlock Text="时间线" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            <Button Content="添加视频" Click="OnAddVideo" Margin="20,0,0,0"/>
+            <Button Content="添加音频" Click="OnAddAudio"/>
+            <Button Content="清空" Click="OnClear"/>
+        </StackPanel>
+
+        <ListView x:Name="LstClips" Grid.Row="1"
+                  SelectionChanged="OnClipSelected"
+                  BorderThickness="1" CornerRadius="6" Padding="4">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE8B5;" FontSize="16"/>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <Border Grid.Row="2" BorderThickness="1" CornerRadius="6" Background="#22000000">
+            <MediaPlayerElement x:Name="PreviewPlayer" AreTransportControlsEnabled="True" AutoPlay="False"/>
+        </Border>
+    </Grid>
+</Page>
