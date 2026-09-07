@@ -24,24 +24,24 @@ struct TimelineView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Button { importMedia() } label: { Label("导入", systemImage: "plus") }
-                            .buttonStyle(.glass)
+                            .glassButton()
                         Button {
                             lib.clips.removeAll(); lib.order.removeAll()
-                        } label: { Label("清空", systemImage: "trash") }.buttonStyle(.glass)
+                        } label: { Label("清空", systemImage: "trash") }.glassButton()
                         Spacer()
                     }
                     if lib.clips.isEmpty {
-                        Text("暂无素材").font(.caption).foregroundStyle(.tertiary)
+                        Text("暂无素材").font(.caption).foregroundColor(Pal.faint)
                     } else {
                         ScrollView {
                             VStack(spacing: 6) {
                                 ForEach(lib.clips) { c in
                                     HStack(spacing: 8) {
                                         Image(systemName: c.kind.symbol).frame(width: 18)
-                                            .foregroundStyle(c.kind == .video ? .purple : (c.kind == .audio ? .teal : .orange))
+                                            .foregroundColor(c.kind == .video ? Pal.purple : (c.kind == .audio ? Pal.teal : Pal.orange))
                                         VStack(alignment: .leading, spacing: 0) {
                                             Text(c.name).font(.caption).lineLimit(1)
-                                            Text(c.kind.label).font(.caption2).foregroundStyle(.tertiary)
+                                            Text(c.kind.label).font(.caption2).foregroundColor(Pal.faint)
                                         }
                                         Spacer()
                                         Button {
@@ -49,10 +49,10 @@ struct TimelineView: View {
                                         } label: { Image(systemName: "folder") }.buttonStyle(.link)
                                         Button { withAnimation { lib.remove(c.id) } } label: {
                                             Image(systemName: "xmark.circle")
-                                        }.buttonStyle(.link).foregroundStyle(.secondary)
+                                        }.buttonStyle(.link).foregroundColor(Pal.muted)
                                     }
                                     .padding(8)
-                                    .glassEffect(.identity, in: .rect(cornerRadius: 10))
+                                    .glassRowStyle
                                 }
                             }
                         }.frame(maxHeight: 380)
@@ -67,7 +67,7 @@ struct TimelineView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         if videoClips.isEmpty {
                             Text("还没有视频片段 —— 去「视频生成」产出一段，或导入本地 mp4/mov。")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.caption).foregroundColor(Pal.muted)
                         } else {
                             ScrollView(.horizontal) {
                                 HStack(spacing: 8) {
@@ -77,7 +77,7 @@ struct TimelineView: View {
                                             Text(c.name).font(.caption2).lineLimit(1).frame(width: 90)
                                         }
                                         .frame(width: 110, height: 64)
-                                        .glassEffect(.regular.tint(.purple.opacity(0.25)), in: .rect(cornerRadius: 12))
+                                        .glassPanel
                                     }
                                 }
                             }.frame(height: 68)
@@ -97,7 +97,7 @@ struct TimelineView: View {
                                     if let f = FilePicker.pick(types: [.audio]) { dubAudio = f }
                                 } label: {
                                     Label(dubAudio?.lastPathComponent ?? "选择替换音轨", systemImage: "music.mic")
-                                }.buttonStyle(.glass)
+                                }.glassButton()
                                 if !audioClips.isEmpty {
                                     Menu("从素材库") {
                                         ForEach(audioClips) { c in
@@ -112,16 +112,16 @@ struct TimelineView: View {
                         HStack {
                             Button { runExport() } label: {
                                 Label("导出成片", systemImage: "square.and.arrow.up")
-                            }.buttonStyle(.glassProminent).disabled(busy || videoClips.isEmpty)
+                            }.glassButton(prominent: true).disabled(busy || videoClips.isEmpty)
                             if let u = outputURL {
-                                Button("播放成片") { NSWorkspace.shared.open(u) }.buttonStyle(.glass)
+                                Button("播放成片") { NSWorkspace.shared.open(u) }.glassButton()
                                 Button("显示") { NSWorkspace.shared.activateFileViewerSelecting([u]) }
-                                    .buttonStyle(.glass)
+                                    .glassButton()
                             }
                             Spacer()
                         }
                         HStack { StatusDot(tone: busy ? .warn : (error == nil ? .ok : .error)); Text(status) }
-                        if let e = error { Text(e).font(.caption).foregroundStyle(.red) }
+                        if let e = error { Text(e).font(.caption).foregroundColor(Pal.red) }
                     }
                 }
                 Spacer()

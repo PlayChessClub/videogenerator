@@ -19,12 +19,12 @@ struct SettingsView: View {
                                 }
                             }
                             .textFieldStyle(.plain)
-                            .font(.body.monospaced())
+                            .monospacedFont(13)
                             .padding(10)
-                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                            .glassField
                             Button { revealKey.toggle() } label: {
                                 Image(systemName: revealKey ? "eye.slash" : "eye")
-                            }.buttonStyle(.glass).fixedSize()
+                            }.glassButton().fixedSize()
                         }
                         HStack {
                             Button {
@@ -33,16 +33,16 @@ struct SettingsView: View {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { savedFlash = false }
                             } label: {
                                 Label("保存到钥匙串", systemImage: "lock.badge.checkmark")
-                            }.buttonStyle(.glassProminent)
+                            }.glassButton(prominent: true)
                             if savedFlash {
-                                Label("已保存", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                                Label("已保存", systemImage: "checkmark.circle.fill").foregroundColor(Pal.green)
                             }
                             Spacer()
                             Link("获取 API Key ↗",
                                  destination: URL(string: "https://bailian.console.aliyun.com/?apiKey=1")!)
                         }
                         Text("提示：在阿里云百炼控制台创建 DashScope API Key（sk- 开头）。更换 Key 后立即生效，无需重启。")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundColor(Pal.muted)
                     }
                 }
 
@@ -56,9 +56,9 @@ struct SettingsView: View {
 
             GlassCard("固定模型（不可更改）", subtitle: "ClipForge 锁定以下模型以保证兼容性") {
                 VStack(spacing: 8) {
-                    ModelRow(symbol: "waveform.circle.fill", tint: .teal, name: "语音合成", model: FixedModel.tts)
-                    ModelRow(symbol: "video.fill", tint: .purple, name: "图生视频", model: FixedModel.videoI2V)
-                    ModelRow(symbol: "person.crop.circle.badge.checkmark", tint: .orange, name: "音色复刻", model: FixedModel.voiceEnrollment)
+                    ModelRow(symbol: "waveform.circle.fill", tint: Pal.teal, name: "语音合成", model: FixedModel.tts)
+                    ModelRow(symbol: "video.fill", tint: Pal.purple, name: "图生视频", model: FixedModel.videoI2V)
+                    ModelRow(symbol: "person.crop.circle.badge.checkmark", tint: Pal.orange, name: "音色复刻", model: FixedModel.voiceEnrollment)
                 }
             }
 
@@ -73,8 +73,8 @@ struct LabeledValue: View {
     init(_ l: String, _ v: String) { label = l; value = v }
     var body: some View {
         HStack(alignment: .top) {
-            Text(label).font(.caption).frame(width: 76, alignment: .leading).foregroundStyle(.secondary)
-            Text(value).font(.caption.monospaced()).textSelection(.enabled)
+            Text(label).font(.caption).frame(width: 76, alignment: .leading).foregroundColor(Pal.muted)
+            Text(value).monospacedFont(11).selectableText()
             Spacer()
         }
     }
@@ -84,13 +84,13 @@ struct ModelRow: View {
     let symbol: String; let tint: Color; let name: String; let model: String
     var body: some View {
         HStack {
-            Image(systemName: symbol).foregroundStyle(tint).frame(width: 24)
+            Image(systemName: symbol).foregroundColor(tint).frame(width: 24)
             Text(name).frame(width: 80, alignment: .leading)
-            Text(model).font(.body.monospaced())
+            Text(model).monospacedFont(13)
             Spacer()
-            Image(systemName: "lock.fill").foregroundStyle(.secondary).font(.caption)
+            Image(systemName: "lock.fill").foregroundColor(Pal.muted).font(.caption)
         }
         .padding(10)
-        .glassEffect(.identity, in: .rect(cornerRadius: 12))
+        .glassRowStyle
     }
 }

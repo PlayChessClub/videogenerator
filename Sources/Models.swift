@@ -97,7 +97,7 @@ struct MediaClip: Identifiable, Hashable {
     var url: URL
     var addedAt: Date
 
-    init(id: UUID = UUID(), kind: Kind, name: String, url: URL, addedAt: Date = .now) {
+    init(id: UUID = UUID(), kind: Kind, name: String, url: URL, addedAt: Date = Date()) {
         self.id = id; self.kind = kind; self.name = name; self.url = url; self.addedAt = addedAt
     }
 }

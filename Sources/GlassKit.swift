@@ -1,21 +1,6 @@
 import SwiftUI
 
-// MARK: - Liquid Glass 组件库
-
-struct GlassPanel: ViewModifier {
-    var interactive: Bool = false
-    func body(content: Content) -> some View {
-        content
-            .padding(18)
-            .glassEffect(interactive ? .regular.interactive() : .regular, in: .rect(cornerRadius: 22))
-    }
-}
-
-extension View {
-    func glassPanel(interactive: Bool = false) -> some View {
-        modifier(GlassPanel(interactive: interactive))
-    }
-}
+// MARK: - Liquid Glass 组件库（兼容 macOS 11+；26 上为真·Liquid Glass）
 
 /// 卡片容器：标题 + 内容，浮于液态玻璃面板上
 struct GlassCard<Content: View>: View {
@@ -34,13 +19,13 @@ struct GlassCard<Content: View>: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)
                 if let subtitle {
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    Text(subtitle).font(.caption).foregroundColor(Pal.muted)
                 }
             }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassPanel()
+        .glassPanel
     }
 }
 
@@ -48,14 +33,15 @@ struct GlassCard<Content: View>: View {
 struct AuroraBackground: View {
     var body: some View {
         ZStack {
-            Color(nsColor: .windowBackgroundColor)
-            Circle().fill(Color(red: 0.55, green: 0.45, blue: 0.95).opacity(0.28))
+            LinearGradient(colors: [Pal.purple.opacity(0.10), Pal.teal.opacity(0.08)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            Circle().fill(Pal.purple.opacity(0.28))
                 .frame(width: 520, height: 520).blur(radius: 110)
                 .offset(x: -300, y: -220)
-            Circle().fill(Color(red: 0.20, green: 0.70, blue: 0.85).opacity(0.25))
+            Circle().fill(Pal.teal.opacity(0.25))
                 .frame(width: 480, height: 480).blur(radius: 110)
                 .offset(x: 330, y: 180)
-            Circle().fill(Color(red: 0.95, green: 0.55, blue: 0.40).opacity(0.18))
+            Circle().fill(Pal.orange.opacity(0.18))
                 .frame(width: 420, height: 420).blur(radius: 120)
                 .offset(x: 60, y: 320)
         }
@@ -68,10 +54,10 @@ struct StatusDot: View {
     enum Tone { case ok, warn, error, idle
         var color: Color {
             switch self {
-            case .ok: return Color(red: 0.20, green: 0.70, blue: 0.35)
-            case .warn: return Color(red: 0.90, green: 0.65, blue: 0.15)
-            case .error: return Color(red: 0.85, green: 0.25, blue: 0.25)
-            case .idle: return .secondary
+            case .ok: return Pal.green
+            case .warn: return Pal.orange
+            case .error: return Pal.red
+            case .idle: return Pal.muted
             }
         }
     }
@@ -85,9 +71,38 @@ struct GlassPill: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(.caption.monospaced())
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .glassEffect(.identity, in: .capsule)
-            .foregroundStyle(.secondary)
+            .monospacedFont(11)
+            .foregroundColor(Pal.muted)
+            .glassChip
+    }
+}
+
+/// 行内小表面（列表行、chip 行）
+struct GlassRow<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        content
+            .padding(10)
+            .background(VisualEffectView(kind: .chip))
+            .overlay(RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+/// 顶部提示条
+struct WarnBanner: View {
+    let text: String
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle")
+            Text(text)
+        }
+        .foregroundColor(Pal.orange)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Pal.orange.opacity(0.12))
+        .overlay(RoundedRectangle(cornerRadius: 12)
+            .strokeBorder(Pal.orange.opacity(0.5), lineWidth: 0.8))
     }
 }

@@ -1,6 +1,6 @@
 # ClipForge · AI 视频编辑助手
 
-一款 macOS（26 / Tahoe，Apple Silicon 原生）AI 视频编辑辅助软件，采用 **Liquid Glass（液态玻璃）** SwiftUI 视觉语言。后端固定对接阿里云 DashScope 的两个模型，API Key 可在应用内随时更换。
+一款 macOS AI 视频编辑辅助软件，采用 **Liquid Glass（液态玻璃）** SwiftUI 视觉语言，向后兼容 **macOS 11（Big Sur）及以上**，同时提供 Apple Silicon（arm64）与 Intel（x86_64）通用二进制。在 macOS 26 上呈现真·液态玻璃材质，在低版本系统自动退化为 NSVisualEffectView 毛玻璃。后端固定对接阿里云 DashScope 的两个模型，API Key 可在应用内随时更换。
 
 > ⚠️ 模型固定、不可切换，以保证兼容性；唯一可配置项是 DashScope API Key。
 
@@ -21,7 +21,7 @@
 
 ## 构建
 
-前置：macOS 26 SDK + Swift 工具链（CommandLineTools 即可，无需完整 Xcode）。
+前置：macOS 26 SDK + Swift 工具链（CommandLineTools 即可，无需完整 Xcode）。产物为 arm64 + x86_64 通用二进制，最低支持 macOS 11.0（Big Sur）；在 macOS 26+ 呈现真·Liquid Glass，低版本自动退化为 NSVisualEffectView 毛玻璃。
 
 ```bash
 ./build.sh
@@ -33,7 +33,7 @@
 
 ## 安装与首次运行
 
-1. 双击 `ClipForge-1.0.0.dmg`，把 ClipForge 拖入「应用程序」。
+1. 双击 `ClipForge-1.1.0.dmg`，把 ClipForge 拖入「应用程序」。
 2. 首次打开若被 Gatekeeper 拦截（ad-hoc 签名，未经苹果公证），右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。
 3. 进入「设置」填入你的 DashScope API Key（阿里云百炼控制台创建，`sk-` 开头），保存后即可使用。
 
@@ -45,6 +45,7 @@
 ClipForge/
 ├── Sources/
 │   ├── ClipForgeApp.swift      # App 入口、TabView、通用组件（Player / FilePicker）
+│   ├── Compat.swift            # 兼容层：glassEffect/NSVisualEffectView 双路径、网络/AVFoundation 版本抹平
 │   ├── GlassKit.swift          # Liquid Glass 视图组件（GlassCard / AuroraBackground …）
 │   ├── Models.swift            # 固定模型常量、AppSettings(钥匙串)、素材库
 │   ├── DashScopeClient.swift   # REST：OSS 上传 / 音色 / 视频任务 / 下载

@@ -7,13 +7,11 @@ struct ClipForgeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     var body: some Scene {
-        WindowGroup("ClipForge · AI 视频编辑助手") {
+        WindowGroup {
             RootView()
-                .frame(minWidth: 960, minHeight: 640)
+                .frame(minWidth: 960, idealWidth: 1120, minHeight: 640, idealHeight: 740)
         }
         .windowStyle(.hiddenTitleBar)
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
-        .defaultSize(width: 1120, height: 740)
     }
 }
 

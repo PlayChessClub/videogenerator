@@ -150,8 +150,8 @@ struct VoiceStudioView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if !settings.hasKey {
                     Label("尚未配置 API Key，请前往「设置」填写。", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange).padding(10)
-                        .glassEffect(.regular.tint(.orange.opacity(0.15)), in: .rect(cornerRadius: 14))
+                        .foregroundColor(Pal.orange).padding(10)
+                        .warnBanner
                 }
 
                 GlassCard("第一步 · 创建克隆音色",
@@ -159,19 +159,19 @@ struct VoiceStudioView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         TextField("粘贴参考音频 URL（如官方示例 .wav）", text: $m.cloningURL)
                             .textFieldStyle(.plain)
-                            .padding(10).glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                            .padding(10).glassField
                         HStack {
-                            Text("前缀").font(.caption).foregroundStyle(.secondary)
+                            Text("前缀").font(.caption).foregroundColor(Pal.muted)
                             TextField("myvoice", text: $m.prefix).frame(width: 140)
                                 .textFieldStyle(.plain).padding(8)
-                                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 10))
+                                .glassField
                             Spacer()
                             Button { m.pickLocalAudio() } label: {
                                 Label("用本地音频", systemImage: "folder")
-                            }.buttonStyle(.glass)
+                            }.glassButton()
                             Button { Task { await m.createVoice() } } label: {
                                 Label("开始克隆", systemImage: "wand.and.stars")
-                            }.buttonStyle(.glassProminent).disabled(m.busy)
+                            }.glassButton(prominent: true).disabled(m.busy)
                         }
                     }
                 }
@@ -181,15 +181,15 @@ struct VoiceStudioView: View {
                         HStack { StatusDot(tone: m.busy ? .warn : (m.error == nil ? .ok : .error)); Text(m.status) }
                         if !m.newVoiceId.isEmpty {
                             HStack {
-                                Text("voice_id：").font(.caption).foregroundStyle(.secondary)
-                                Text(m.newVoiceId).font(.caption.monospaced()).textSelection(.enabled)
+                                Text("voice_id：").font(.caption).foregroundColor(Pal.muted)
+                                Text(m.newVoiceId).monospacedFont(11).selectableText()
                                 Button("复制") { NSPasteboard.general.clearContents()
                                     NSPasteboard.general.setString(m.newVoiceId, forType: .string) }
                                     .buttonStyle(.link)
                             }
                         }
                         if let e = m.error {
-                            Text(e).font(.caption).foregroundStyle(.red).textSelection(.enabled)
+                            Text(e).font(.caption).foregroundColor(Pal.red).selectableText()
                         }
                     }
                 }
@@ -197,9 +197,9 @@ struct VoiceStudioView: View {
                 GlassCard("第二步 · 文本转语音") {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("音色").font(.caption).foregroundStyle(.secondary)
+                            Text("音色").font(.caption).foregroundColor(Pal.muted)
                             if m.voices.isEmpty {
-                                Text("（暂无，先创建或使用 voice_id）").font(.caption).foregroundStyle(.tertiary)
+                                Text("（暂无，先创建或使用 voice_id）").font(.caption).foregroundColor(Pal.faint)
                             } else {
                                 Picker("", selection: $m.selectedVoice) {
                                     Text("选择音色").tag("")
@@ -211,8 +211,8 @@ struct VoiceStudioView: View {
                             Button("刷新列表") { Task { await m.refreshVoices() } }.buttonStyle(.link)
                             Spacer()
                         }
-                        TextEditor(text: $m.text).frame(height: 90).scrollContentBackground(.hidden)
-                            .padding(8).glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                        TextEditor(text: $m.text).frame(height: 90).hideScrollBackground()
+                            .padding(8).glassField
                         VStack(alignment: .leading, spacing: 6) {
                             LabeledSlider("音量", value: $m.volume, range: 0...100)
                             LabeledSlider("语速", value: $m.speechRate, range: 0.5...2.0)
@@ -221,22 +221,22 @@ struct VoiceStudioView: View {
                         HStack {
                             Button { Task { await m.synthesize() } } label: {
                                 Label("生成语音", systemImage: "speaker.wave.3.fill")
-                            }.buttonStyle(.glassProminent).disabled(m.busy)
+                            }.glassButton(prominent: true).disabled(m.busy)
                             if let url = m.lastAudioURL {
                                 Button { Player.shared.play(name: url.lastPathComponent, url: url) } label: {
                                     Label("试听", systemImage: "play.circle")
-                                }.buttonStyle(.glass)
+                                }.glassButton()
                                 Button("在访达显示") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
                                     .buttonStyle(.link)
                             }
                             Spacer()
                         }
-                        if m.busy { ProgressView(value: m.progress).tint(.purple) }
+                        if m.busy { ProgressView(value: m.progress).accentPurple() }
                     }
                 }
             }
         }
-        .scrollContentBackground(.hidden)
+        .hideScrollBackground()
     }
 }
 
@@ -249,9 +249,9 @@ struct LabeledSlider: View {
     }
     var body: some View {
         HStack {
-            Text(label).font(.caption).frame(width: 34, alignment: .leading).foregroundStyle(.secondary)
+            Text(label).font(.caption).frame(width: 34, alignment: .leading).foregroundColor(Pal.muted)
             Slider(value: $value, in: range)
-            Text(String(format: "%.1f", value)).font(.caption.monospaced()).frame(width: 34)
+            Text(String(format: "%.1f", value)).monospacedFont(11).frame(width: 34)
         }
     }
 }

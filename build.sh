@@ -5,19 +5,33 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="1.0.0"
+VERSION="1.1.0"
+MIN_OS="11.0"
 BUILD_DIR="build"
 SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-TARGET="arm64-apple-macosx26.0"
+DEV_DIR=/Library/Developer/CommandLineTools
 APP="$BUILD_DIR/$APP_NAME.app"
 
-echo "==> [1/6] 编译 $APP_NAME（Swift / arm64 / macOS 26）"
+echo "==> [1/6] 编译 $APP_NAME（通用二进制 arm64 + x86_64，最低 macOS $MIN_OS）"
 rm -rf "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-DEVELOPER_DIR=/Library/Developer/CommandLineTools swiftc \
-  -sdk "$SDK" -target "$TARGET" -O \
-  -o "$APP/Contents/MacOS/$APP_NAME" \
-  Sources/*.swift
+rm -f "$BUILD_DIR/bin_arm64" "$BUILD_DIR/bin_x86_64"
+
+DEVELOPER_DIR=$DEV_DIR swiftc -sdk "$SDK" -target arm64-apple-macosx${MIN_OS} -O \
+  -o "$BUILD_DIR/bin_arm64" Sources/*.swift 2>&1 | grep -v warning || true
+[ -f "$BUILD_DIR/bin_arm64" ] || { echo "arm64 编译失败"; exit 1; }
+
+# Intel x86_64：SDK 仍含 x86_64 切片；失败则降级为 arm64-only
+if DEVELOPER_DIR=$DEV_DIR swiftc -sdk "$SDK" -target x86_64-apple-macosx${MIN_OS} -O \
+  -o "$BUILD_DIR/bin_x86_64" Sources/*.swift 2>/dev/null; then
+  echo "  · 合并 arm64 + x86_64 通用二进制"
+  lipo -create "$BUILD_DIR/bin_arm64" "$BUILD_DIR/bin_x86_64" -output "$APP/Contents/MacOS/$APP_NAME"
+else
+  echo "  · x86_64 编译不可用，仅产出 arm64（Apple Silicon，Big Sur+）"
+  cp "$BUILD_DIR/bin_arm64" "$APP/Contents/MacOS/$APP_NAME"
+fi
+chmod +x "$APP/Contents/MacOS/$APP_NAME"
+file "$APP/Contents/MacOS/$APP_NAME"
 
 echo "==> [2/6] 生成 Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST
@@ -33,7 +47,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>$APP_NAME</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>LSMinimumSystemVersion</key><string>26.0</string>
+  <key>LSMinimumSystemVersion</key><string>$MIN_OS</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>ClipForge · 基于阿里云 DashScope（cosyvoice-v3.5-plus / wan2.6-i2v）</string>
   <key>NSAppTransportSecurity</key>

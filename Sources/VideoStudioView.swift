@@ -113,34 +113,34 @@ struct VideoStudioView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if !settings.hasKey {
                     Label("尚未配置 API Key，请前往「设置」填写。", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange).padding(10)
-                        .glassEffect(.regular.tint(.orange.opacity(0.15)), in: .rect(cornerRadius: 14))
+                        .foregroundColor(Pal.orange).padding(10)
+                        .warnBanner
                 }
 
                 GlassCard("图生视频 · \(FixedModel.videoI2V)") {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Prompt").font(.caption).foregroundStyle(.secondary)
-                        TextEditor(text: $m.prompt).frame(height: 84).scrollContentBackground(.hidden)
-                            .padding(8).glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                        Text("Prompt").font(.caption).foregroundColor(Pal.muted)
+                        TextEditor(text: $m.prompt).frame(height: 84).hideScrollBackground()
+                            .padding(8).glassField
 
-                        Text("首帧图片（必填）").font(.caption).foregroundStyle(.secondary)
+                        Text("首帧图片（必填）").font(.caption).foregroundColor(Pal.muted)
                         HStack {
                             Button { m.pickImage() } label: {
                                 Label(m.localImage?.lastPathComponent ?? "选择本地图片", systemImage: "photo.badge.plus")
-                            }.buttonStyle(.glass)
+                            }.glassButton()
                             TextField("或填公网图片 URL", text: $m.imageURL)
                                 .textFieldStyle(.plain).padding(10)
-                                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                                .glassField
                         }
 
-                        Text("配音音频（可选）").font(.caption).foregroundStyle(.secondary)
+                        Text("配音音频（可选）").font(.caption).foregroundColor(Pal.muted)
                         HStack {
                             Button { m.pickAudio() } label: {
                                 Label(m.localAudio?.lastPathComponent ?? "选择本地音频", systemImage: "music.note.list")
-                            }.buttonStyle(.glass)
+                            }.glassButton()
                             TextField("或填音频 URL（可从时间线/配音生成）", text: $m.audioURL)
                                 .textFieldStyle(.plain).padding(10)
-                                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
+                                .glassField
                         }
                         if !lib.clips.filter { $0.kind == .audio }.isEmpty {
                             Menu {
@@ -164,13 +164,13 @@ struct VideoStudioView: View {
                             }
                         }.pickerStyle(.segmented)
 
-                        Toggle("智能扩写 prompt_extend", isOn: $m.promptExtend).toggleStyle(.switch)
-                        Toggle("生成音频轨 audio", isOn: $m.audioEnabled).toggleStyle(.switch)
+                        Toggle("智能扩写 prompt_extend", isOn: $m.promptExtend).switchToggle()
+                        Toggle("生成音频轨 audio", isOn: $m.audioEnabled).switchToggle()
 
                         HStack {
                             Button { Task { await m.submit() } } label: {
                                 Label("开始生成视频", systemImage: "video.fill.badge.plus")
-                            }.buttonStyle(.glassProminent).disabled(m.busy)
+                            }.glassButton(prominent: true).disabled(m.busy)
                             Spacer()
                         }
                         if m.busy {
@@ -183,17 +183,17 @@ struct VideoStudioView: View {
                             GlassPill(text: "task_id: \(m.taskId)")
                         }
                         if let e = m.error {
-                            Text(e).font(.caption).foregroundStyle(.red).textSelection(.enabled)
+                            Text(e).font(.caption).foregroundColor(Pal.red).selectableText()
                         }
                         if let v = m.videoLocalURL {
                             Divider()
                             HStack {
-                                Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
+                                Image(systemName: "checkmark.seal.fill").foregroundColor(Pal.green)
                                 Text(v.lastPathComponent).font(.caption).lineLimit(1)
                                 Spacer()
-                                Button("播放") { NSWorkspace.shared.open(v) }.buttonStyle(.glass)
+                                Button("播放") { NSWorkspace.shared.open(v) }.glassButton()
                                 Button("显示") { NSWorkspace.shared.activateFileViewerSelecting([v]) }
-                                    .buttonStyle(.glass)
+                                    .glassButton()
                                 VideoPreview(url: v).frame(width: 220, height: 130)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
@@ -202,7 +202,7 @@ struct VideoStudioView: View {
                 }
             }
         }
-        .scrollContentBackground(.hidden)
+        .hideScrollBackground()
     }
 }
 

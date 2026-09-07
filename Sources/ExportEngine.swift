@@ -53,14 +53,12 @@ enum ExportEngine {
 
         for (i, url) in plan.videos.enumerated() {
             let asset = AVURLAsset(url: url)
-            let vTracks = try await asset.loadTracks(withMediaType: .video)
-            guard let v = vTracks.first else { throw ExportError.badVideo }
-            let aTracks = (try? await asset.loadTracks(withMediaType: .audio)) ?? []
-            let a = aTracks.first
+            guard let v = await AVCompat.videoTrack(asset) else { throw ExportError.badVideo }
+            let a = await AVCompat.audioTrack(asset)
 
-            let size = v.naturalSize.applying(v.preferredTransform)
+            let size = (await AVCompat.naturalSize(v)).applying(await AVCompat.preferredTransform(v))
             let norm = CGSize(width: abs(size.width), height: abs(size.height))
-            let dur = try await asset.load(.duration)
+            let dur = await AVCompat.duration(asset)
             if renderSize == nil { renderSize = norm }
 
             let range = CMTimeRange(start: .zero, duration: dur)
@@ -78,8 +76,8 @@ enum ExportEngine {
         // 配音模式：插入替换音轨
         if plan.mode == .dub, let audioURL = plan.dubAudio {
             let audioAsset = AVURLAsset(url: audioURL)
-            if let a = ((try? await audioAsset.loadTracks(withMediaType: .audio)) ?? []).first {
-                let ad = try await audioAsset.load(.duration)
+            if let a = await AVCompat.audioTrack(audioAsset) {
+                let ad = await AVCompat.duration(audioAsset)
                 let d = min(ad.seconds, CMTimeGetSeconds(total))
                 let r = CMTimeRange(start: .zero, duration: CMTime(seconds: max(d, 0.1), preferredTimescale: 600))
                 try? trackA?.insertTimeRange(r, of: a, at: .zero)
@@ -122,13 +120,19 @@ enum ExportEngine {
         try? FileManager.default.removeItem(at: output)
         exporter.outputURL = output
         exporter.outputFileType = .mp4
-        exporter.videoComposition = needsComposition ? videoComposition : nil
+        if needsComposition { exporter.videoComposition = videoComposition }
 
-        do {
-            try await exporter.export(to: output, as: .mp4)
-        } catch {
-            throw ExportError.exportFailed(error.localizedDescription)
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            exporter.exportAsynchronously { c.resume() }
         }
         progress?(1.0)
+
+        switch exporter.status {
+        case .completed: return
+        case .failed, .cancelled:
+            throw ExportError.exportFailed(exporter.error?.localizedDescription ?? "未知错误")
+        default:
+            throw ExportError.exportFailed("导出状态异常")
+        }
     }
 }

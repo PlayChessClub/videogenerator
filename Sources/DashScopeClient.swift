@@ -218,7 +218,7 @@ final class DashScopeClient {
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
         for (k, v) in try authHeaders() { req.setValue(v, forHTTPHeaderField: k) }
-        let (data, _) = try await session.data(for: req)
+        let (data, _) = try await Net.data(req)
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         let out = json["output"] as? [String: Any] ?? [:]
         let state = (out["task_status"] as? String) ?? "UNKNOWN"
@@ -230,7 +230,7 @@ final class DashScopeClient {
     // MARK: - 下载远端资源到本地
 
     func download(_ remote: URL, to dest: URL) async throws {
-        let (tmp, _) = try await session.download(from: remote)
+        let (tmp, _) = try await Net.download(URLRequest(url: remote))
         if FileManager.default.fileExists(atPath: dest.path) {
             try? FileManager.default.removeItem(at: dest)
         }
@@ -248,7 +248,7 @@ final class DashScopeClient {
         req.setValue("application/json", forHTTPHeaderField: "Accept")
         for (k, v) in try authHeaders(extra: extra) { req.setValue(v, forHTTPHeaderField: k) }
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await session.data(for: req)
+        let (data, resp) = try await Net.data(req)
         let status = (resp as? HTTPURLResponse)?.statusCode ?? -1
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
         if !(200..<300).contains(status) {
