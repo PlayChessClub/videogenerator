@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="1.1.0"
+VERSION="1.1.1"
 MIN_OS="11.0"
 BUILD_DIR="build"
 SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
@@ -150,7 +150,21 @@ tell application "Finder"
 end tell
 APPLESCRIPT
 
-if osascript "$BUILD_DIR/dmg_layout.applescript" 2>"$BUILD_DIR/osascript.log"; then
+# AppleScript 偶发受残留挂载或 Finder 状态干扰：失败时重挂载 + 重试一次
+ran_as=1
+if ! osascript "$BUILD_DIR/dmg_layout.applescript" 2>"$BUILD_DIR/osascript.log"; then
+    ran_as=0
+    echo "  · AppleScript 首次失败，重挂载后重试…"
+    hdiutil detach "/Volumes/$APP_NAME" 2>/dev/null || true
+    sleep 1
+    hdiutil attach "$DMG_RW" -nobrowse -readwrite -mountpoint "/Volumes/$APP_NAME" >/dev/null 2>&1 || \
+      hdiutil attach "$DMG_RW" -nobrowse -readwrite >/dev/null 2>&1
+    sleep 2
+    if osascript "$BUILD_DIR/dmg_layout.applescript" 2>"$BUILD_DIR/osascript.log"; then
+        ran_as=1
+    fi
+fi
+if [ "$ran_as" -eq 1 ]; then
     echo "  · 窗口布局已应用（隐藏工具栏 + 图标位置 + 玻璃背景）"
 else
     echo "  · AppleScript 美化失败（详见 $BUILD_DIR/osascript.log），以默认外观继续"

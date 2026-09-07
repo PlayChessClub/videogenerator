@@ -154,7 +154,7 @@ struct VideoStudioView: View {
 
                         HStack(spacing: 16) {
                             Picker("分辨率", selection: $m.resolution) {
-                                Text("480P").tag("480P"); Text("720P").tag("720P"); Text("1080P").tag("1080P")
+                                Text("720P").tag("720P"); Text("1080P").tag("1080P")
                             }
                             Picker("时长", selection: $m.duration) {
                                 ForEach([5, 10, 15], id: \.self) { Text("\($0)s").tag($0) }

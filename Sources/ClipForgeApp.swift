@@ -44,13 +44,79 @@ struct RootView: View {
     var body: some View {
         ZStack {
             AuroraBackground()
-            TabView(selection: $selection) {
-                VoiceStudioView().tabItem { Label(Tab.voice.rawValue, systemImage: Tab.voice.symbol) }.tag(Tab.voice)
-                VideoStudioView().tabItem { Label(Tab.video.rawValue, systemImage: Tab.video.symbol) }.tag(Tab.video)
-                TimelineView().tabItem { Label(Tab.timeline.rawValue, systemImage: Tab.timeline.symbol) }.tag(Tab.timeline)
-                SettingsView().tabItem { Label(Tab.settings.rawValue, systemImage: Tab.settings.symbol) }.tag(Tab.settings)
+            VStack(spacing: 14) {
+                TopTabBar(selection: $selection)
+                ZStack {
+                    switch selection {
+                    case .voice: VoiceStudioView().transition(.opacity)
+                    case .video: VideoStudioView().transition(.opacity)
+                    case .timeline: TimelineView().transition(.opacity)
+                    case .settings: SettingsView().transition(.opacity)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(24)
+            .padding(.horizontal, 28)
+            .padding(.top, 20)
+            .padding(.bottom, 28)
+        }
+        .frame(minWidth: 980, minHeight: 640)
+    }
+}
+
+/// 顶部自绘玻璃 TabBar：呼吸空间 + 容器阴影 + 选中态高亮
+private struct TopTabBar: View {
+    @Binding var selection: RootView.Tab
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(RootView.Tab.allCases) { tab in
+                Button {
+                    withAnimation(.easeOut(duration: 0.18)) { selection = tab }
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: tab.symbol).font(.system(size: 13, weight: .medium))
+                        Text(tab.rawValue).font(.system(size: 13.5, weight: .medium))
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 8)
+                    .foregroundColor(selection == tab ? .white : .primary.opacity(0.78))
+                    .background(
+                        Group {
+                            if selection == tab {
+                                Capsule().fill(Pal.purple)
+                            } else {
+                                Capsule().fill(Color.primary.opacity(0.05))
+                            }
+                        }
+                    )
+                    .overlay(
+                        Capsule().strokeBorder(
+                            selection == tab ? Color.clear : Color.primary.opacity(0.08),
+                            lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
+            }
+        }
+        .padding(6)
+        .background(tabBarBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 6)
+    }
+
+    /// 26 用 Liquid Glass；低版本用 NSVisualEffectView 毛玻璃
+    @ViewBuilder
+    private var tabBarBackground: some View {
+        if #available(macOS 26.0, *) {
+            RoundedRectangle(cornerRadius: 14).fill(.clear)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 14))
+        } else {
+            VisualEffectView(kind: .chip)
         }
     }
 }
