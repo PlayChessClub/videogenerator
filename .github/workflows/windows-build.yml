@@ -70,11 +70,12 @@ jobs:
             if ($content -match 'ExpandPriContent') {
               Write-Host "清空 $($tf.FullName)"
               # unpackaged 应用不需要 MRT/PRI 资源。把整个 MrtCore.PriGen.targets
-              # 文件内容清空(只留一个 XML 注释),这样:
+              # 内容替换成一个「合法的空 <Project>」,这样:
+              #   - MrtCore.targets 第 9 行的 <Import> 仍能正常加载(有根元素)
               #   - <UsingTask ... Pri.Tasks.ExpandPriContent> 不再被加载(根因:这个
-              #     dll 在 GitHub Actions runner 上根本不存在,MSBuild 加载失败 MSB4062)
+              #     dll 在 GitHub Actions runner 上根本不存在,加载失败 MSB4062)
               #   - <ExpandPriContent> 内联 task 调用也一并消失
-              Set-Content -Path $tf.FullName -Value '<?xml version="1.0" encoding="utf-8"?><!-- MRT PRI generation disabled for unpackaged app -->' -NoNewline
+              Set-Content -Path $tf.FullName -Value '<?xml version="1.0" encoding="utf-8"?><Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003"></Project>' -NoNewline
               $patchedCount++
             }
           }
