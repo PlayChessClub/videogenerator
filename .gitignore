@@ -13,6 +13,18 @@ build/
 # 密钥（绝不入库）
 .env
 *.key
+settings.yml
+settings.dat
+
+# Windows / .NET 构建产物
+Windows/bin/
+Windows/obj/
+Windows/publish/
+Windows/src/bin/
+Windows/src/obj/
+*.user
+*.suo
+.vs/
 
 # 构建期临时文件
 build/dmg_bg*.png
