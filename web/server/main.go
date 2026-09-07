@@ -17,13 +17,16 @@ import (
 	"io"
 	"io/fs"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -374,12 +377,39 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	// 监听端口(失败立即报错,避免"以为启动了却白等")
+	ln, err := net.Listen("tcp", listenAddr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "❌ 端口启动失败:", err)
+		os.Exit(1)
+	}
+
 	fmt.Printf("🎬 ClipForge 启动 → http://%s\n", listenAddr)
 	fmt.Printf("   配置文件: %s\n", configPath())
 	fmt.Printf("   按 Ctrl+C 退出\n")
-	openBrowser("http://" + listenAddr)
-	if err := srv.ListenAndServe(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+
+	// 先启动 HTTP server(goroutine),再唤起 UI,保证页面一打开就能访问到
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- srv.Serve(ln)
+	}()
+
+	// Windows: 内嵌 WebView2 窗口(阻塞直到关窗,关窗即退出)
+	// 其他平台: 打开系统浏览器后返回
+	launchUI("http://" + listenAddr)
+
+	// Ctrl+C 优雅退出(主要给非 Windows 平台用)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-errCh:
+		if err != nil && err != http.ErrServerClosed {
+			fmt.Fprintln(os.Stderr, "❌ server 出错:", err)
+			os.Exit(1)
+		}
+	case <-sigCh:
+		fmt.Println("\n收到 Ctrl+C,正在退出…")
+		_ = srv.Close()
 	}
 }

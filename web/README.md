@@ -13,8 +13,13 @@
 ```bash
 cd web/server
 go run .
-# 浏览器会自动打开 http://127.0.0.1:8731
+# Windows: 自动弹出内嵌 WebView2(Chromium)应用窗口,关窗即退出
+# macOS/Linux: 自动打开系统浏览器 http://127.0.0.1:8731
 ```
+
+> Windows 版用 **WebView2**(Edge 的 Chromium 内核)渲染,Win10/Win11 自带运行时,
+> 无需额外安装。WebView2Loader.dll 已内嵌进 exe,仍是**单文件**。
+> 若系统缺失 WebView2(极老的精简系统),自动退回打开默认浏览器。
 
 ### 3) 打包成单文件 exe(Windows)
 
@@ -26,18 +31,20 @@ go build -ldflags="-s -w" -o ..\..\clipforge.exe .
 # ARM64 用 arm64 替换 amd64
 ```
 
-最终 `clipforge.exe` 双击就开,会自动开浏览器到 `http://127.0.0.1:8731`。
+最终 `clipforge.exe` 双击就开,弹出内嵌 Chromium 应用窗口,无需手动开浏览器。
 
 ### 4) 配置 API Key
 
-首次启动后,在浏览器「设置」页填入 DashScope API Key,保存到本地明文 yml。
+首次启动后,在应用「设置」页填入 DashScope API Key,保存到本地明文 yml。
 
 ## 文件布局
 
 ```
 web/
 ├── server/
-│   ├── main.go        # Go HTTP server,代理 DashScope + 静态服务
+│   ├── main.go             # Go HTTP server,代理 DashScope + 静态服务
+│   ├── webview_win.go      # Windows: 内嵌 WebView2 窗口(关窗=退出)
+│   ├── webview_other.go    # macOS/Linux: 打开系统浏览器
 │   ├── go.mod
 │   └── go.sum
 └── static/

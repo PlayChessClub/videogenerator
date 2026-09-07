@@ -135,7 +135,7 @@ jobs:
 
             1. 解压 zip
             2. 双击 `clipforge.exe`(或 macOS/Linux 双击 `clipforge`)
-            3. 浏览器自动打开 http://127.0.0.1:8731
+            3. **Windows** 自动弹出内嵌 WebView2(Chromium)应用窗口;macOS/Linux 自动打开浏览器
             4. 在「设置」填入 DashScope API Key
             5. 开始用
 
