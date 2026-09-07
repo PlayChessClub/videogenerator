@@ -21,6 +21,9 @@
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishSingleFile>false</PublishSingleFile>
+    <!-- unpackaged 应用不需要 MRT 资源索引,关掉可绕开 GitHub Actions windows-latest
+         上 .NET 10 SDK + VS v18 路径缺 Microsoft.Build.Packaging.Pri.Tasks.dll 的问题 -->
+    <EnableMrtResourceIndexer>false</EnableMrtResourceIndexer>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Product>ClipForge · AI 视频编辑助手</Product>
     <Company>ClipForge</Company>
