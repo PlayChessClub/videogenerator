@@ -13,3 +13,11 @@ build/
 # 密钥（绝不入库）
 .env
 *.key
+
+# 构建期临时文件
+build/dmg_bg*.png
+build/dmg_bg.tiff
+build/makebg
+build/makeicon
+build/osascript.log
+build/dmg_layout.applescript

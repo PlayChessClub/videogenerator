@@ -29,7 +29,7 @@
 
 产物：
 - `build/ClipForge.app`（ad-hoc 签名）
-- `build/ClipForge-<版本>.dmg`（含 Applications 快捷方式，可直接拖拽安装）
+- `build/ClipForge-<版本>.dmg`（**Finder 窗口自带美化背景** —— 紫青玻璃渐变 + 弧形虚线箭头 + 提示卡片；图标按 128px 居中布局，隐藏工具栏/状态栏。Retina 屏自动使用 2x 背景图）
 
 ## 安装与首次运行
 
@@ -55,8 +55,9 @@ ClipForge/
 │   ├── VideoStudioView.swift   # 视频生成页
 │   ├── TimelineView.swift      # 剪辑时间线页
 │   └── SettingsView.swift      # 设置页
-├── Tools/MakeIcon.swift        # 应用图标生成器
-└── build.sh                    # 一键编译 + 打包 dmg
+├── Tools/MakeIcon.swift          # 应用图标生成器
+├── Tools/MakeDMGBackground.swift # DMG 安装窗口背景图生成器（紫青玻璃 + 弧形箭头）
+└── build.sh                      # 一键编译 + 打包 dmg（含 AppleScript 美化 Finder 窗口）
 ```
 
 ## 技术要点
