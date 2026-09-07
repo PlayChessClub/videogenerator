@@ -33,6 +33,8 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.241114003" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.756" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <!-- DPAPI:ProtectedData 在 .NET 8 + Windows TFM 下属于独立的 NuGet 包,必须显式引用 -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
