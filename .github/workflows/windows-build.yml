@@ -18,7 +18,11 @@ concurrency:
 jobs:
   build:
     name: 编译并发布 Windows ${{ matrix.arch }}
-    runs-on: windows-latest
+    # 固定 windows-2022 而不是 windows-latest:
+    # windows-latest 现在预装 .NET 10 SDK + VS v18 路径,但 Microsoft.Build.Packaging.Pri.Tasks.dll
+    # 没装在那里,触发 WinAppSDK 1.6 的 MrtCore.PriGen.targets 报 MSB4062。
+    # windows-2022 runner 装 .NET 8/9 SDK,路径适配 WinAppSDK 1.6。
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
