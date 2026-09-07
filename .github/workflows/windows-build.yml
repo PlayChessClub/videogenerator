@@ -83,7 +83,7 @@ jobs:
 
       - name: 编译(必须零错误)
         working-directory: Windows
-        run: dotnet build src/ClipForgeAI.Win.csproj -c Release -p:Platform=${{ matrix.arch }} --no-restore
+        run: dotnet build src/ClipForgeAI.Win.csproj -c Release -r win-${{ matrix.arch }} -p:Platform=${{ matrix.arch }} --no-restore
 
       - name: 发布(自包含 + Windows App SDK 运行时)
         working-directory: Windows
