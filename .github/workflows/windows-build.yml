@@ -38,7 +38,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-          cache: true
+          # 不开 cache: true,会强制要求 packages.lock.json 但我们没生成
+          # 改由下面的 restore 步骤手动管 NuGet
 
       # 显式清空 NuGet 缓存,避免上次 CI 残留的 win-arm64 失败包干扰
       - name: 清理 NuGet 缓存(防止上次 run 残留)
@@ -51,9 +52,8 @@ jobs:
         working-directory: Windows
         shell: pwsh
         run: |
-          dotnet restore src/ClipForgeAI.Win.csproj `
-            --runtime win-${{ matrix.arch }} `
-            --locked-mode:$false
+          dotnet restore src/ClipForgeAI.Win.csproj
+          Write-Host "✅ 还原完成"
 
       - name: 编译(零错误必须)
         working-directory: Windows
