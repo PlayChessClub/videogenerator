@@ -25,41 +25,16 @@
                 </StackPanel>
             </Expander>
 
-            <!-- 音色列表 -->
-            <Expander Header="已有音色(下拉选择 / 刷新)" IsExpanded="True">
+            <!-- 已有音色 -->
+            <Expander Header="已有音色(用于其他工具集成)" IsExpanded="True">
                 <StackPanel Spacing="12" Padding="0,12,0,0">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <ComboBox x:Name="CmbVoices" PlaceholderText="先克隆一个音色" MinWidth="280"/>
                         <Button Content="刷新" Click="OnRefreshVoices"/>
                     </StackPanel>
-                </StackPanel>
-            </Expander>
-
-            <!-- TTS 合成 -->
-            <Expander Header="语音合成(选音色 + 文本 + 调参)" IsExpanded="True">
-                <StackPanel Spacing="12" Padding="0,12,0,0">
-                    <TextBox x:Name="TxtTtsText" Header="要合成的文本"
-                             PlaceholderText="请输入要朗读的文字…"
-                             AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100"/>
-                    <StackPanel Orientation="Horizontal" Spacing="16">
-                        <StackPanel Spacing="4" MinWidth="160">
-                            <TextBlock Text="音量(0~200)"/>
-                            <Slider x:Name="SldVolume" Minimum="0" Maximum="200" Value="0"/>
-                        </StackPanel>
-                        <StackPanel Spacing="4" MinWidth="160">
-                            <TextBlock Text="语速(-50~100)"/>
-                            <Slider x:Name="SldRate" Minimum="-50" Maximum="100" Value="0"/>
-                        </StackPanel>
-                        <StackPanel Spacing="4" MinWidth="160">
-                            <TextBlock Text="音调(-50~100)"/>
-                            <Slider x:Name="SldPitch" Minimum="-50" Maximum="100" Value="0"/>
-                        </StackPanel>
-                    </StackPanel>
-                    <Button x:Name="BtnSynthesize" Content="开始合成"
-                            Style="{StaticResource AccentButtonStyle}"
-                            Click="OnSynthesize"/>
-                    <ProgressBar x:Name="PbTts" Visibility="Collapsed" Maximum="100"/>
-                    <TextBlock x:Name="TxtTtsStatus" Opacity="0.8" TextWrapping="Wrap"/>
+                    <TextBlock Opacity="0.6" TextWrapping="Wrap">
+                        注:TTS 实时合成需要 WebSocket 全双工协议,本版本未集成,请用阿里云 DashScope 控制台或其他客户端。
+                    </TextBlock>
                 </StackPanel>
             </Expander>
         </StackPanel>

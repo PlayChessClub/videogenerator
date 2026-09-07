@@ -9,11 +9,14 @@
 | 能力 | 模型 | API |
 |---|---|---|
 | 声音克隆 | `cosyvoice-v3.5-plus` | DashScope REST `create_voice` + 轮询 |
-| 语音合成 | `cosyvoice-v3.5-plus` | DashScope WebSocket `run-task / continue-task / finish-task` |
+| 音色列表 | — | DashScope REST `list voices` |
 | 图生视频 | `wan2.6-i2v` | DashScope REST 异步任务 + 轮询 + 下载 |
 
-API Key 通过 Windows **DPAPI**(Data Protection API)以当前用户身份加密,落在
-`%APPDATA%\ClipForge\settings.dat`,其他用户无法解密,等价于 macOS Keychain 的行为。
+> ⚠️ **简化说明**:WebSocket 实时 TTS 合成不在本版本范围(协议复杂、踩过 task-failed 等错误),需要时直接用 DashScope 控制台或 DashScope Python SDK 即可。视频时间线只做预览,不做拼接导出(macOS 端有 ExportEngine.swift 用 AVFoundation 拼接)。
+
+API Key 以**明文 YAML** 写入 `%APPDATA%\ClipForge\settings.yml`(YamlDotNet 读写)。
+
+> 🔒 **明文存储风险**:本机任何进程都能读这个文件。**请勿把 settings.yml 提交到代码仓库**,也别通过云盘/聊天工具分享。如需更高安全性,在文件资源管理器上手动用 EFS / VeraCrypt 加密目录。
 
 UI 用 WinUI 3 控件,主窗口背景是 **Mica**(Win11 22H2+ 原生材质),Win10 自动回退到 Acrylic。
 整体观感与 macOS 端的 Liquid Glass 接近 — 半透明、跟随桌面壁纸、不会遮挡内容。
@@ -60,13 +63,12 @@ Windows/
 (子命名空间),导致 `SizeInt32`、`MediaSource` 等系统类型无法解析。改用 `.Win` 后
 再无歧义。
 
-### 凭据存储 = DPAPI,不是 PasswordVault
-`Windows.Security.Credentials.PasswordVault` 在 **unpackaged** WinAppSDK 应用
-(`WindowsPackageType=None`)中行为不稳定。改用 .NET 内置的
-`System.Security.Cryptography.ProtectedData.Protect()`:
-- 用当前用户的 Windows 凭据做加密,等同 Keychain 保护级别
-- 文件落在 `%APPDATA%\ClipForge\settings.dat`
-- 不需要特殊权限,不依赖 WinAppSDK runtime 行为
+### 凭据存储 = 明文 .yml,不是 DPAPI
+原计划用 `System.Security.Cryptography.ProtectedData`(DPAPI)做加密,
+但作为 .NET 8 + Windows TFM 的独立 NuGet 包,集成到 WinUI 3 unpackaged 工程会引入
+额外的运行时依赖。本版本简化为**明文 YAML**,文件落在 `%APPDATA%\ClipForge\settings.yml`,
+本机任何进程可读,用户自行保管。代码里没有任何敏感操作;如果将来要恢复加密,
+重新加 `<PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />` 即可。
 
 ### 背景材质 = Mica
 直接设置 `this.SystemBackdrop = new MicaBackdrop { Kind = MicaKind.BaseAlt };`。

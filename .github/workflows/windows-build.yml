@@ -2,26 +2,20 @@ name: build-windows
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
     paths:
       - 'Windows/**'
       - '.github/workflows/windows-build.yml'
   workflow_dispatch:
 
-# 写 release / 上传 release 资产都要 write 权限
 permissions:
   contents: write
 
-# 同一个 PR/分支上 cancel 旧 run,避免两个 matrix 并行打架
 concurrency:
   group: windows-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ============================================================
-  # 1) 编译 + 发布(双架构 x64 / ARM64)
-  # ============================================================
   build:
     name: 编译并发布 Windows ${{ matrix.arch }}
     runs-on: windows-latest
@@ -31,90 +25,57 @@ jobs:
         arch: [x64, ARM64]
 
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: 安装 .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-          # 不开 cache: true,会强制要求 packages.lock.json 但我们没生成
-          # 改由下面的 restore 步骤手动管 NuGet
 
-      # 显式清空 NuGet 缓存,避免上次 CI 残留的 win-arm64 失败包干扰
-      - name: 清理 NuGet 缓存(防止上次 run 残留)
+      - name: 清空 NuGet 缓存
         shell: pwsh
-        run: |
-          dotnet nuget locals all --clear
-          Write-Host "NuGet 缓存已清空"
+        run: dotnet nuget locals all --clear
 
       - name: 还原依赖
         working-directory: Windows
-        shell: pwsh
-        run: |
-          dotnet restore src/ClipForgeAI.Win.csproj
-          Write-Host "✅ 还原完成"
+        run: dotnet restore src/ClipForgeAI.Win.csproj
 
-      - name: 编译(零错误必须)
+      - name: 编译(必须零错误)
         working-directory: Windows
-        shell: pwsh
-        run: |
-          dotnet build src/ClipForgeAI.Win.csproj `
-            -c Release `
-            -p:Platform=${{ matrix.arch }} `
-            --no-restore
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "编译失败,请查看上方错误"
-            exit 1
-          }
-          Write-Host "✅ 编译成功"
+        run: dotnet build src/ClipForgeAI.Win.csproj -c Release -p:Platform=${{ matrix.arch }} --no-restore
 
-      - name: 发布(自包含,含 Windows App SDK 运行时)
+      - name: 发布(自包含 + Windows App SDK 运行时)
         working-directory: Windows
-        shell: pwsh
         run: |
           $out = "publish/${{ matrix.arch }}"
           if (Test-Path $out) { Remove-Item $out -Recurse -Force }
-
           dotnet publish src/ClipForgeAI.Win.csproj `
-            -c Release `
-            -r win-${{ matrix.arch }} `
+            -c Release -r win-${{ matrix.arch }} `
             -p:Platform=${{ matrix.arch }} `
             -p:WindowsAppSDKSelfContained=true `
             -p:SelfContained=true `
             -p:PublishSingleFile=false `
             -p:WindowsPackageType=None `
             -p:DebugType=embedded `
-            -o $out `
-            --no-restore
+            -o $out --no-restore
 
-          Write-Host "✅ 发布成功,产物: $out"
-          Get-ChildItem $out | Select-Object Name, Length | Format-Table -AutoSize
-
-      - name: 验证 ClipForge.exe 存在
+      - name: 验证 ClipForge.exe
         working-directory: Windows
-        shell: pwsh
         run: |
           $exe = "publish/${{ matrix.arch }}/ClipForge.exe"
-          if (-not (Test-Path $exe)) {
-            Write-Error "❌ 找不到 $exe,发布失败"
-            exit 1
-          }
-          $sizeMB = [math]::Round((Get-Item $exe).Length / 1MB, 2)
-          Write-Host "✅ 找到 $exe ($sizeMB MB)"
+          if (-not (Test-Path $exe)) { throw "❌ 找不到 $exe" }
+          Write-Host "✅ $exe 存在,$([math]::Round((Get-Item $exe).Length/1MB,1)) MB"
 
-      - name: 打包成 zip
+      - name: 打包 zip
         working-directory: Windows
-        shell: pwsh
         run: |
           $src = "publish/${{ matrix.arch }}"
           $dst = "publish/ClipForge-windows-${{ matrix.arch }}.zip"
           if (Test-Path $dst) { Remove-Item $dst -Force }
           Compress-Archive -Path "$src/*" -DestinationPath $dst -CompressionLevel Optimal
-          $sizeMB = [math]::Round((Get-Item $dst).Length / 1MB, 1)
-          Write-Host "✅ 已生成 $dst ($sizeMB MB)"
+          Write-Host "✅ $dst,$([math]::Round((Get-Item $dst).Length/1MB,1)) MB"
 
-      - name: 上传构建产物(workflow artifacts)
+      - name: 上传 artifact
         uses: actions/upload-artifact@v4
         with:
           name: ClipForge-windows-${{ matrix.arch }}
@@ -122,41 +83,32 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # ============================================================
-  # 2) 创建 Release 并上传 zip(只在 tag 触发时)
-  # ============================================================
   release:
     name: 发布 Release
     needs: build
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: 下载所有架构产物
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
-      - name: 确认 zip 都在
+      - name: 确认双架构 zip 齐全
         working-directory: artifacts
         run: |
           ls -la
-          if [ ! -f ClipForge-windows-x64.zip ]; then
-            echo "❌ 缺 x64 zip"; exit 1
-          fi
-          if [ ! -f ClipForge-windows-ARM64.zip ]; then
-            echo "❌ 缺 ARM64 zip"; exit 1
-          fi
+          [ -f ClipForge-windows-x64.zip ] || { echo "❌ 缺 x64 zip"; exit 1; }
+          [ -f ClipForge-windows-ARM64.zip ] || { echo "❌ 缺 ARM64 zip"; exit 1; }
           echo "✅ 双架构 zip 都齐全"
 
-      - name: 创建 GitHub Release 并上传资产
+      - name: 创建 Release 并上传资产
         uses: softprops/action-gh-release@v2
         with:
-          # 关键:tag_name 必须是完整 ref,不能用短 SHA
           tag_name: ${{ github.ref_name }}
           name: "ClipForge Windows ${{ github.ref_name }}"
           generate_release_notes: true
-          # 旧版默认会把 latest 顶到最新。这里显式 false,避免 Windows v2 顶掉 macOS v1.1.1 的 LATEST
+          # false:不顶替 macOS v1.1.1 的 LATEST 标记
           make_latest: 'false'
           fail_on_unmatched_files: false
           files: |
@@ -168,9 +120,9 @@ jobs:
             AI 视频编辑助手 · Windows 11 自包含发布版。
 
             - WinUI 3 + .NET 8 + Mica 系统材质
-            - 声音克隆 / 语音合成(cosyvoice-v3.5-plus)
+            - 声音克隆(cosyvoice-v3.5-plus)
             - 图生视频(wan2.6-i2v)
-            - 与 macOS 客户端行为完全一致
+            - API Key 明文存在 %APPDATA%\ClipForge\settings.yml(请勿分享)
 
             ### 下载
 

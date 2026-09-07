@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using ClipForgeAI.Win.Models;
 using ClipForgeAI.Win.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -82,36 +81,5 @@ public sealed partial class VoiceStudioPage : Page
             CmbVoices.ItemsSource = voices;
         }
         catch { /* 静默:用户可能未设置 key */ }
-    }
-
-    private async void OnSynthesize(object sender, RoutedEventArgs e)
-    {
-        var key = SettingsService.LoadApiKey();
-        if (string.IsNullOrEmpty(key)) { TxtTtsStatus.Text = "请先在「设置」中填入 API Key。"; return; }
-        if (string.IsNullOrWhiteSpace(TxtTtsText.Text)) { TxtTtsStatus.Text = "请输入要合成的文本。"; return; }
-        var voice = CmbVoices.SelectedItem as string;
-        if (string.IsNullOrEmpty(voice)) { TxtTtsStatus.Text = "请选择一个音色。"; return; }
-
-        PbTts.Visibility = Visibility.Visible;
-        BtnSynthesize.IsEnabled = false;
-        TxtTtsStatus.Text = "合成中…";
-        try
-        {
-            var outPath = Path.Combine(SettingsService.OutputDirectory, $"tts_{DateTime.Now:yyyyMMdd_HHmmss}.mp3");
-            var tts = new CosyVoiceTtsService(key);
-            var req = new TtsRequest
-            {
-                Text = TxtTtsText.Text,
-                VoiceId = voice,
-                Volume = 1.0 + SldVolume.Value / 100.0,
-                Rate = 1.0 + SldRate.Value / 100.0,
-                Pitch = 1.0 + SldPitch.Value / 100.0,
-            };
-            var progress = new Progress<double>(p => PbTts.Value = p * 100);
-            await tts.SynthesizeAsync(req, outPath, progress);
-            TxtTtsStatus.Text = $"✅ 已保存:{outPath}";
-        }
-        catch (Exception ex) { TxtTtsStatus.Text = "❌ " + ex.Message; }
-        finally { PbTts.Visibility = Visibility.Collapsed; BtnSynthesize.IsEnabled = true; }
     }
 }

@@ -49,7 +49,9 @@
 源码在 `Windows/`，**根命名空间为 `ClipForgeAI.Win`**（避开 `ClipForgeAI.Windows` 与系统 `Windows.*` 命名空间冲突）。WinUI 3 + .NET 8 + Windows App SDK 1.6。
 
 主要差异（与 macOS 客户端）：
-- API Key 存于 Windows **DPAPI** 加密的本地文件（`%APPDATA%\ClipForge\settings.dat`），等价于 macOS Keychain
+- API Key 以**明文 YAML** 存在 `%APPDATA%\ClipForge\settings.yml`，本机任何进程可读，请勿提交到仓库
+- 不集成实时 TTS WebSocket 合成（协议复杂、踩过坑），需时用 DashScope 控制台或 Python SDK
+- 时间线只做预览，不做拼接导出（macOS 端的 ExportEngine 用 AVFoundation 拼接，Windows 这边未实现）
 - 背景材质用 Mica（Win11 22H2+），自动回退 Acrylic
 - 工程名 `ClipForgeAI.Win.csproj`，不用 sln 也可以
 
