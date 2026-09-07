@@ -24,6 +24,8 @@
     <!-- unpackaged 应用不需要 MRT 资源索引,关掉可绕开 GitHub Actions windows-latest
          上 .NET 10 SDK + VS v18 路径缺 Microsoft.Build.Packaging.Pri.Tasks.dll 的问题 -->
     <EnableMrtResourceIndexer>false</EnableMrtResourceIndexer>
+    <EnableDefaultPriItems>false</EnableDefaultPriItems>
+    <GenerateAppxPackageOnBuild>false</GenerateAppxPackageOnBuild>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Product>ClipForge · AI 视频编辑助手</Product>
     <Company>ClipForge</Company>
@@ -43,5 +45,12 @@
   <ItemGroup>
     <Content Include="Assets\**\*.*" />
   </ItemGroup>
+
+  <!-- 覆盖 WinAppSDK 1.6 MrtCore.PriGen.targets 里的 ExpandPriContent 任务。
+       GitHub Actions windows-2022 runner 装了 .NET 8 SDK,但 Visual Studio v17.0/AppxPackage/
+       目录不存在(Microsoft.Build.Packaging.Pri.Tasks.dll 缺失)。
+       unpackaged 应用不需要 PRI 资源,让 task 空跑即可。
+       Target 必须在 PropertyGroup 外,且放在最后才生效(后定义覆盖前定义)。 -->
+  <Target Name="ExpandPriContent" />
 
 </Project>
