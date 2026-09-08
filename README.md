@@ -14,6 +14,7 @@
 - **声音工作室**：CosyVoice 声音克隆（voice enrollment）+ 文本转语音。支持公网音频 URL 或本地音频上传，音色状态自动轮询，合成参数可调（音量 / 语速 / 音高）。
 - **视频生成**：图生视频（首帧 + 可选配音），异步任务提交 + 自动轮询 + 结果下载。分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关可控。
 - **剪辑时间线**：把生成的视频按顺序拼接导出，支持「保留原声」或「整体替换配音」两种模式，纯 AVFoundation 实现，无外部依赖。
+- **消费预估值**：在发起语音合成 / 声音克隆 / 图生视频前，会弹窗提示**预计消耗的 token 区间（±30%）** 与**预估金额**，确认后才真正调用模型，避免无意产生费用。
 - **设置**：DashScope API Key 存于 macOS 钥匙串（`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`，仅本机、解锁后可用），可随时更换。
 
 ## 固定模型
@@ -38,7 +39,7 @@
 
 ## 安装与首次运行
 
-1. 双击 `ClipForge-1.1.0.dmg`，把 ClipForge 拖入「应用程序」。
+1. 双击 `ClipForge-1.2.0.dmg`，把 ClipForge 拖入「应用程序」。
 2. 首次打开若被 Gatekeeper 拦截（ad-hoc 签名，未经苹果公证），右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。
 3. 进入「设置」填入你的 DashScope API Key（阿里云百炼控制台创建，`sk-` 开头），保存后即可使用。
 
@@ -95,7 +96,9 @@ ClipForge/
 │   ├── VoiceStudioView.swift
 │   ├── VideoStudioView.swift
 │   ├── TimelineView.swift
-│   └── SettingsView.swift
+│   ├── SettingsView.swift
+│   ├── TokenEstimator.swift       # 费用/token 预估（语音按字符、视频按秒、克隆按出账）
+│   └── TokenConfirmOverlay.swift  # 生成前 token 消耗确认浮层（含 ±30% 区间）
 ├── Tools/
 │   ├── MakeIcon.swift            # 应用图标生成器
 │   └── MakeDMGBackground.swift   # DMG 安装窗口背景图

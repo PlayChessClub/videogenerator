@@ -23,6 +23,9 @@ final class VideoStudioModel: ObservableObject {
     @Published var elapsed: Int = 0
     @Published var lastJSON: [String: Any]? = nil
 
+    /// 生成前 token 消耗确认
+    let confirm = TokenConfirmModel()
+
     private let client = DashScopeClient.shared
 
     func pickImage() {
@@ -37,7 +40,15 @@ final class VideoStudioModel: ObservableObject {
 
     func useLibraryAudio(_ url: URL) { localAudio = url }
 
-    func submit() async {
+    /// 入口：先弹 token 消耗确认，用户点「继续生成」后才真正执行
+    func submit() {
+        // 提示词扩写与否影响估算，但视频按时长/分辨率计费，token 当量跟随该口径
+        let est = TokenEstimator.estimateVideo(
+            prompt: prompt, resolution: resolution, duration: duration)
+        confirm.confirmAndRun(est) { [weak self] in await self?.performSubmit() }
+    }
+
+    private func performSubmit() async {
         error = nil; videoLocalURL = nil; busy = true; elapsed = 0
         defer { busy = false }
         do {
@@ -109,100 +120,104 @@ struct VideoStudioView: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if !settings.hasKey {
-                    Label("尚未配置 API Key，请前往「设置」填写。", systemImage: "exclamationmark.triangle")
-                        .foregroundColor(Pal.orange).padding(10)
-                        .warnBanner
-                }
+        ZStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !settings.hasKey {
+                        Label("尚未配置 API Key，请前往「设置」填写。", systemImage: "exclamationmark.triangle")
+                            .foregroundColor(Pal.orange).padding(10)
+                            .warnBanner
+                    }
 
-                GlassCard("图生视频 · \(FixedModel.videoI2V)") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Prompt").font(.caption).foregroundColor(Pal.muted)
-                        TextEditor(text: $m.prompt).frame(height: 84).hideScrollBackground()
-                            .padding(8).glassField
+                    GlassCard("图生视频 · \(FixedModel.videoI2V)") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Prompt").font(.caption).foregroundColor(Pal.muted)
+                            TextEditor(text: $m.prompt).frame(height: 84).hideScrollBackground()
+                                .padding(8).glassField
 
-                        Text("首帧图片（必填）").font(.caption).foregroundColor(Pal.muted)
-                        HStack {
-                            Button { m.pickImage() } label: {
-                                Label(m.localImage?.lastPathComponent ?? "选择本地图片", systemImage: "photo.badge.plus")
-                            }.glassButton()
-                            TextField("或填公网图片 URL", text: $m.imageURL)
-                                .textFieldStyle(.plain).padding(10)
-                                .glassField
-                        }
-
-                        Text("配音音频（可选）").font(.caption).foregroundColor(Pal.muted)
-                        HStack {
-                            Button { m.pickAudio() } label: {
-                                Label(m.localAudio?.lastPathComponent ?? "选择本地音频", systemImage: "music.note.list")
-                            }.glassButton()
-                            TextField("或填音频 URL（可从时间线/配音生成）", text: $m.audioURL)
-                                .textFieldStyle(.plain).padding(10)
-                                .glassField
-                        }
-                        if !lib.clips.filter { $0.kind == .audio }.isEmpty {
-                            Menu {
-                                ForEach(lib.clips.filter { $0.kind == .audio }) { c in
-                                    Button(c.name) { m.useLibraryAudio(c.url) }
-                                }
-                            } label: {
-                                Label("使用素材库配音", systemImage: "waveform.path")
-                            }.menuStyle(.borderlessButton).fixedSize()
-                        }
-
-                        HStack(spacing: 16) {
-                            Picker("分辨率", selection: $m.resolution) {
-                                Text("720P").tag("720P"); Text("1080P").tag("1080P")
-                            }
-                            Picker("时长", selection: $m.duration) {
-                                ForEach([5, 10, 15], id: \.self) { Text("\($0)s").tag($0) }
-                            }
-                            Picker("镜头", selection: $m.shotType) {
-                                Text("单镜头").tag("single"); Text("多镜头").tag("multi")
-                            }
-                        }.pickerStyle(.segmented)
-
-                        Toggle("智能扩写 prompt_extend", isOn: $m.promptExtend).switchToggle()
-                        Toggle("生成音频轨 audio", isOn: $m.audioEnabled).switchToggle()
-
-                        HStack {
-                            Button { Task { await m.submit() } } label: {
-                                Label("开始生成视频", systemImage: "video.fill.badge.plus")
-                            }.glassButton(prominent: true).disabled(m.busy)
-                            Spacer()
-                        }
-                        if m.busy {
-                            ProgressView().progressViewStyle(.circular)
-                            HStack { StatusDot(tone: .warn); Text(m.status) }
-                        } else {
-                            HStack { StatusDot(tone: m.error == nil ? .ok : .error); Text(m.status) }
-                        }
-                        if !m.taskId.isEmpty {
-                            GlassPill(text: "task_id: \(m.taskId)")
-                        }
-                        if let e = m.error {
-                            Text(e).font(.caption).foregroundColor(Pal.red).selectableText()
-                        }
-                        if let v = m.videoLocalURL {
-                            Divider()
+                            Text("首帧图片（必填）").font(.caption).foregroundColor(Pal.muted)
                             HStack {
-                                Image(systemName: "checkmark.seal.fill").foregroundColor(Pal.green)
-                                Text(v.lastPathComponent).font(.caption).lineLimit(1)
+                                Button { m.pickImage() } label: {
+                                    Label(m.localImage?.lastPathComponent ?? "选择本地图片", systemImage: "photo.badge.plus")
+                                }.glassButton()
+                                TextField("或填公网图片 URL", text: $m.imageURL)
+                                    .textFieldStyle(.plain).padding(10)
+                                    .glassField
+                            }
+
+                            Text("配音音频（可选）").font(.caption).foregroundColor(Pal.muted)
+                            HStack {
+                                Button { m.pickAudio() } label: {
+                                    Label(m.localAudio?.lastPathComponent ?? "选择本地音频", systemImage: "music.note.list")
+                                }.glassButton()
+                                TextField("或填音频 URL（可从时间线/配音生成）", text: $m.audioURL)
+                                    .textFieldStyle(.plain).padding(10)
+                                    .glassField
+                            }
+                            if !lib.clips.filter { $0.kind == .audio }.isEmpty {
+                                Menu {
+                                    ForEach(lib.clips.filter { $0.kind == .audio }) { c in
+                                        Button(c.name) { m.useLibraryAudio(c.url) }
+                                    }
+                                } label: {
+                                    Label("使用素材库配音", systemImage: "waveform.path")
+                                }.menuStyle(.borderlessButton).fixedSize()
+                            }
+
+                            HStack(spacing: 16) {
+                                Picker("分辨率", selection: $m.resolution) {
+                                    Text("720P").tag("720P"); Text("1080P").tag("1080P")
+                                }
+                                Picker("时长", selection: $m.duration) {
+                                    ForEach([5, 10, 15], id: \.self) { Text("\($0)s").tag($0) }
+                                }
+                                Picker("镜头", selection: $m.shotType) {
+                                    Text("单镜头").tag("single"); Text("多镜头").tag("multi")
+                                }
+                            }.pickerStyle(.segmented)
+
+                            Toggle("智能扩写 prompt_extend", isOn: $m.promptExtend).switchToggle()
+                            Toggle("生成音频轨 audio", isOn: $m.audioEnabled).switchToggle()
+
+                            HStack {
+                                Button { m.submit() } label: {
+                                    Label("开始生成视频", systemImage: "video.fill.badge.plus")
+                                }.glassButton(prominent: true).disabled(m.busy)
                                 Spacer()
-                                Button("播放") { NSWorkspace.shared.open(v) }.glassButton()
-                                Button("显示") { NSWorkspace.shared.activateFileViewerSelecting([v]) }
-                                    .glassButton()
-                                VideoPreview(url: v).frame(width: 220, height: 130)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            if m.busy {
+                                ProgressView().progressViewStyle(.circular)
+                                HStack { StatusDot(tone: .warn); Text(m.status) }
+                            } else {
+                                HStack { StatusDot(tone: m.error == nil ? .ok : .error); Text(m.status) }
+                            }
+                            if !m.taskId.isEmpty {
+                                GlassPill(text: "task_id: \(m.taskId)")
+                            }
+                            if let e = m.error {
+                                Text(e).font(.caption).foregroundColor(Pal.red).selectableText()
+                            }
+                            if let v = m.videoLocalURL {
+                                Divider()
+                                HStack {
+                                    Image(systemName: "checkmark.seal.fill").foregroundColor(Pal.green)
+                                    Text(v.lastPathComponent).font(.caption).lineLimit(1)
+                                    Spacer()
+                                    Button("播放") { NSWorkspace.shared.open(v) }.glassButton()
+                                    Button("显示") { NSWorkspace.shared.activateFileViewerSelecting([v]) }
+                                        .glassButton()
+                                    VideoPreview(url: v).frame(width: 220, height: 130)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
                             }
                         }
                     }
                 }
             }
+            .hideScrollBackground()
+
+            TokenConfirmOverlay(model: m.confirm, title: "图生视频")
         }
-        .hideScrollBackground()
     }
 }
 

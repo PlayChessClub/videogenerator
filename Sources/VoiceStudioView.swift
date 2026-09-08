@@ -24,6 +24,9 @@ final class VoiceStudioModel: ObservableObject {
     @Published var lastAudioURL: URL? = nil
     @Published var progress: Double = 0
 
+    /// 生成/克隆前 token 消耗确认
+    let confirm = TokenConfirmModel()
+
     private let client = DashScopeClient.shared
 
     var voiceIds: [String] {
@@ -39,11 +42,17 @@ final class VoiceStudioModel: ObservableObject {
         }
     }
 
-    // 步骤一：从 URL 创建克隆音色
-    func createVoice() async {
-        error = nil
+    // 步骤一：从 URL 创建克隆音色（先确认再执行）
+    func createVoice() {
         let url = cloningURL.trimmingCharacters(in: .whitespaces)
         if url.isEmpty { error = "请填写公网可访问的音频 URL"; return }
+        confirm.confirmAndRun(TokenEstimator.estimateVoiceClone()) { [weak self] in
+            await self?.performCreateVoice(url: url)
+        }
+    }
+
+    private func performCreateVoice(url: String) async {
+        error = nil
         busy = true; status = "提交音色克隆请求…"
         defer { busy = false }
         do {
@@ -57,13 +66,15 @@ final class VoiceStudioModel: ObservableObject {
         }
     }
 
-    // 从本地音频上传克隆
+    // 从本地音频上传克隆（先确认再执行）
     func pickLocalAudio() {
         guard let f = FilePicker.pick(types: [.audio, .wav, .mpeg4Audio]) else { return }
-        Task { await cloneFromLocal(f) }
+        confirm.confirmAndRun(TokenEstimator.estimateVoiceClone()) { [weak self] in
+            await self?.performCloneFromLocal(f)
+        }
     }
 
-    func cloneFromLocal(_ f: URL) async {
+    private func performCloneFromLocal(_ f: URL) async {
         error = nil; busy = true
         status = "上传参考音频到临时 OSS…"
         defer { busy = false }
@@ -114,12 +125,19 @@ final class VoiceStudioModel: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
-    // 合成
-    func synthesize() async {
-        error = nil
+    // 合成（先确认 token 消耗再执行）
+    func synthesize() {
         let voice = selectedVoice.isEmpty ? newVoiceId : selectedVoice
         if voice.isEmpty { error = "请先选择或创建一个音色"; return }
         if text.trimmingCharacters(in: .whitespaces).isEmpty { error = "请输入要合成的文本"; return }
+        let est = TokenEstimator.estimateTTS(text: text)
+        confirm.confirmAndRun(est) { [weak self] in
+            await self?.performSynthesize(voice: voice)
+        }
+    }
+
+    private func performSynthesize(voice: String) async {
+        error = nil
         busy = true; status = "连接合成服务…"; progress = 0.1
         defer { busy = false }
         do {
@@ -146,7 +164,8 @@ struct VoiceStudioView: View {
     @ObservedObject private var settings = AppSettings.shared
 
     var body: some View {
-        ScrollView {
+        ZStack {
+            ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if !settings.hasKey {
                     Label("尚未配置 API Key，请前往「设置」填写。", systemImage: "exclamationmark.triangle")
@@ -169,7 +188,7 @@ struct VoiceStudioView: View {
                             Button { m.pickLocalAudio() } label: {
                                 Label("用本地音频", systemImage: "folder")
                             }.glassButton()
-                            Button { Task { await m.createVoice() } } label: {
+                            Button { m.createVoice() } label: {
                                 Label("开始克隆", systemImage: "wand.and.stars")
                             }.glassButton(prominent: true).disabled(m.busy)
                         }
@@ -219,7 +238,7 @@ struct VoiceStudioView: View {
                             LabeledSlider("音高", value: $m.pitch, range: 0.5...2.0)
                         }
                         HStack {
-                            Button { Task { await m.synthesize() } } label: {
+                            Button { m.synthesize() } label: {
                                 Label("生成语音", systemImage: "speaker.wave.3.fill")
                             }.glassButton(prominent: true).disabled(m.busy)
                             if let url = m.lastAudioURL {
@@ -235,8 +254,11 @@ struct VoiceStudioView: View {
                     }
                 }
             }
+            }
+            .hideScrollBackground()
+
+            TokenConfirmOverlay(model: m.confirm, title: "语音/克隆")
         }
-        .hideScrollBackground()
     }
 }
 
