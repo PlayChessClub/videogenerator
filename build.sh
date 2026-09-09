@@ -95,7 +95,9 @@ if [ -f "$ICON_TMP" ]; then
     || cp "$ICON_TMP" "$APP/Contents/Resources/AppIcon.icns"
 fi
 
-echo "==> [4/5] 代码签名"
+echo "==> [4/5] 装入许可证 + 代码签名"
+# Apache-2.0 LICENSE 随 app 装入（用户可在 Finder 右键 App → 显示包内容 → Contents/Resources/LICENSE 查看）
+cp LICENSE "$APP/Contents/Resources/LICENSE"
 if [ -n "$SIGN_APP" ]; then
   echo "  · 使用正式证书: $SIGN_APP"
   codesign --force --deep --sign "$SIGN_APP" "$APP" 2>/dev/null
@@ -105,22 +107,58 @@ else
 fi
 codesign --verify --verbose=1 "$APP" 2>&1 | tail -1
 
-echo "==> [5/5] 打包 .pkg 安装包（安装到 /Applications）"
-if [ -n "$SIGN_PKG" ]; then
-  echo "  · 使用正式证书: $SIGN_PKG"
-  PKG_SIGN_FLAG=(--sign "$SIGN_PKG")
-else
-  echo "  · 未签名 pkg（未配置 SIGN_PKG）"
-  PKG_SIGN_FLAG=()
-fi
+echo "==> [5/5] 打包 .pkg（component + distribution，安装向导含 Apache-2.0 许可协议页）"
 PKG="$BUILD_DIR/ClipForge-${VERSION}.pkg"
-rm -f "$PKG"
-pkgbuild --component "$APP" --install-location /Applications \
-    "${PKG_SIGN_FLAG[@]}" \
-    "$PKG" 2>"$BUILD_DIR/pkgbuild.log" || {
-      echo "  · pkgbuild 失败，见 $BUILD_DIR/pkgbuild.log"; cat "$BUILD_DIR/pkgbuild.log"; exit 1; }
-[ -f "$PKG" ] || { echo "  · pkg 打包失败，见 $BUILD_DIR/pkgbuild.log"; exit 1; }
-rm -f "$BUILD_DIR/pkgbuild.log"
+COMPONENT="$BUILD_DIR/ClipForge-${VERSION}-component.pkg"
+DIST_DIR="$BUILD_DIR/.dist"
+PKG_LICENSE="$BUILD_DIR/LICENSE.txt"
+rm -f "$PKG" "$COMPONENT"
+[ -f "$PKG_LICENSE" ] || cp LICENSE "$PKG_LICENSE"
+
+# ① component 包（app 本体，装到 /Applications）
+if ! pkgbuild --component "$APP" --install-location /Applications "$COMPONENT" 2>"$BUILD_DIR/pkgbuild.log"; then
+  echo "  · pkgbuild 失败，见 $BUILD_DIR/pkgbuild.log"; cat "$BUILD_DIR/pkgbuild.log"; exit 1
+fi
+[ -f "$COMPONENT" ] || { echo "  · component 包生成失败"; exit 1; }
+
+# ② distribution 包：productbuild 把 component 包 + 许可协议页包成最终安装器
+rm -rf "$DIST_DIR"; mkdir -p "$DIST_DIR/resources"
+cp "$PKG_LICENSE" "$DIST_DIR/resources/LICENSE.txt"
+cat > "$DIST_DIR/dist.xml" <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>ClipForge $VERSION</title>
+    <license file="LICENSE.txt"/>
+    <pkg-ref id="$BUNDLE_ID"/>
+    <options customize="never" require-scripts="false"/>
+    <choices-outline>
+        <line choice="default">
+            <line choice="$BUNDLE_ID"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="$BUNDLE_ID" visible="false">
+        <pkg-ref id="$BUNDLE_ID"/>
+    </choice>
+    <pkg-ref id="$BUNDLE_ID" version="$VERSION" onConclusion="none">ClipForge-${VERSION}-component.pkg</pkg-ref>
+</installer-gui-script>
+XML
+if [ -n "$SIGN_PKG" ]; then
+  echo "  · 正式签名 distribution: $SIGN_PKG"
+  xcrun productbuild --sign "$SIGN_PKG" \
+    --distribution "$DIST_DIR/dist.xml" --package-path "$BUILD_DIR" \
+    --resources "$DIST_DIR/resources" "$PKG" 2>"$BUILD_DIR/pkgbuild.log"
+else
+  echo "  · 未签名 distribution（未配置 SIGN_PKG）"
+  xcrun productbuild \
+    --distribution "$DIST_DIR/dist.xml" --package-path "$BUILD_DIR" \
+    --resources "$DIST_DIR/resources" "$PKG" 2>"$BUILD_DIR/pkgbuild.log"
+fi
+if [ ! -f "$PKG" ]; then
+  echo "  · productbuild 失败，见 $BUILD_DIR/pkgbuild.log"; cat "$BUILD_DIR/pkgbuild.log"; exit 1
+fi
+rm -f "$COMPONENT" "$PKG_LICENSE" "$BUILD_DIR/pkgbuild.log"
+rm -rf "$DIST_DIR"
 
 echo "==> 完成"
 ls -lh "$PKG" "$APP/Contents/MacOS/$APP_NAME"
