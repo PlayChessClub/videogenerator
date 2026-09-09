@@ -172,3 +172,67 @@ h2:first-child { margin-top: 0; }
   border-top: 1px solid var(--border);
   background: rgba(11, 11, 20, 0.5);
 }
+
+/* ===== 以下是 v3.2 新增组件 ===== */
+
+.btn.mini { padding: 3px 10px; font-size: 11px; border-radius: 6px; margin-left: 8px; }
+a.btn { display: inline-block; text-decoration: none; }
+
+/* 滑块 */
+.field input[type="range"] { width: 100%; accent-color: var(--primary); cursor: pointer; }
+
+/* 图片结果 */
+.result .img-item {
+  display: inline-block; margin: 0 12px 12px 0; text-align: center;
+}
+.result .img-item img {
+  width: 220px; height: 220px; object-fit: cover;
+  border-radius: 10px; border: 1px solid var(--border); display: block; margin-bottom: 8px;
+}
+
+/* 账本汇总三卡 */
+.cards3 { display: flex; gap: 12px; margin-bottom: 16px; }
+.cards3 .stat {
+  flex: 1; background: var(--bg-1); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px; text-align: center;
+}
+.stat-num { font-size: 22px; font-weight: 600; color: var(--primary-2); }
+.stat-label { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+/* 账本明细表 */
+.table-wrap { overflow-x: auto; margin-top: 10px; }
+.table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.table th, .table td {
+  text-align: left; padding: 7px 10px;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.table th { color: var(--text-dim); font-weight: 500; position: sticky; top: 0; background: rgba(11,11,20,0.9); }
+.table td.clip { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+/* 价目表 */
+.price-title { font-size: 13px; color: var(--text-dim); margin: 12px 0 8px; }
+.price-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 7px 4px; border-bottom: 1px dashed var(--border); font-size: 13px;
+}
+.price-row:last-child { border-bottom: 0; }
+.price-model { color: var(--primary-2); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.price-num { color: var(--text-dim); }
+
+/* 费用确认弹窗 */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+}
+.confirm {
+  width: min(420px, 90vw);
+  background: #16161f;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.confirm h3 { font-size: 16px; margin-bottom: 12px; }
+.confirm-amount { font-size: 20px; font-weight: 600; color: var(--warn); margin-bottom: 8px; }
+.confirm .row { margin-top: 18px; justify-content: flex-end; }

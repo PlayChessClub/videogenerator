@@ -28,6 +28,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 //go:embed static
@@ -137,6 +139,10 @@ func dashScopeProxy(w http.ResponseWriter, r *http.Request, path string) {
 	}
 	req.Header.Set("Authorization", "Bearer "+key)
 	req.Header.Set("user-agent", "clipforge/2.0.0")
+	// body 里引用 oss:// 资源时,让 DashScope 自动解析(与 Mac 版行为一致)
+	if bytes.Contains(body, []byte("oss://")) {
+		req.Header.Set("X-DashScope-OssResourceResolve", "enable")
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -286,6 +292,204 @@ func openBrowser(url string) {
 }
 
 // ============================================================
+// 账单(与 Mac 版 BillStore 同构: bill.jsonl 追加式持久化)
+// ============================================================
+
+type BillEntry struct {
+	ID         string `json:"id"`
+	Time       string `json:"time"` // RFC3339
+	Action     string `json:"action"`
+	Model      string `json:"model"`
+	Summary    string `json:"summary"`
+	UnitName   string `json:"unitName"`
+	UnitCount  int    `json:"unitCount"`
+	TokenMin   int    `json:"tokenMin"`
+	TokenMax   int    `json:"tokenMax"`
+	AmountText string `json:"amountText"`
+	Detail     string `json:"detail"`
+	TaskID     string `json:"taskId,omitempty"`
+	Status     string `json:"status"`
+}
+
+var billMu sync.Mutex
+
+func billPath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		dir = "."
+	}
+	return filepath.Join(dir, appDir, "bill.jsonl")
+}
+
+func billLoad() []BillEntry {
+	data, err := os.ReadFile(billPath())
+	if err != nil {
+		return nil
+	}
+	var list []BillEntry
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var e BillEntry
+		if json.Unmarshal([]byte(line), &e) == nil {
+			list = append(list, e)
+		}
+	}
+	// 最新的在前
+	for i, j := 0, len(list)-1; i < j; i, j = i+1, j-1 {
+		list[i], list[j] = list[j], list[i]
+	}
+	return list
+}
+
+func handleBill(w http.ResponseWriter, r *http.Request) {
+	billMu.Lock()
+	defer billMu.Unlock()
+	switch r.Method {
+	case "GET":
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"entries": billLoad()})
+	case "POST":
+		var e BillEntry
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+		if e.ID == "" {
+			e.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+		}
+		if e.Time == "" {
+			e.Time = time.Now().Format(time.RFC3339)
+		}
+		if e.Status == "" {
+			e.Status = "已提交"
+		}
+		f, err := os.OpenFile(billPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+		if err == nil {
+			line, _ := json.Marshal(e)
+			f.Write(append(line, '\n'))
+			f.Close()
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"id": e.ID})
+	case "PUT": // 回填任务状态(与 Mac 版 BillStore.update 同用途)
+		var patch BillEntry
+		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil || patch.ID == "" {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+		list := billLoad() // 已是最新在前
+		for i := range list {
+			if list[i].ID == patch.ID {
+				if patch.TaskID != "" {
+					list[i].TaskID = patch.TaskID
+				}
+				if patch.Status != "" {
+					list[i].Status = patch.Status
+				}
+				break
+			}
+		}
+		var b strings.Builder
+		for i := len(list) - 1; i >= 0; i-- { // 反转回旧在前,重写磁盘
+			line, _ := json.Marshal(list[i])
+			b.Write(line)
+			b.WriteByte('\n')
+		}
+		_ = os.WriteFile(billPath(), []byte(b.String()), 0600)
+		w.Write([]byte(`{"ok":true}`))
+	case "DELETE":
+		os.Remove(billPath())
+		w.Write([]byte(`{"ok":true}`))
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// CSV 导出(带 BOM,字段转义,与 Mac 版 csvText 一致)
+func handleBillExport(w http.ResponseWriter, r *http.Request) {
+	billMu.Lock()
+	list := billLoad()
+	billMu.Unlock()
+	csvEscape := func(f string) string {
+		if strings.ContainsAny(f, ",\"\n") {
+			return `"` + strings.ReplaceAll(f, `"`, `""`) + `"`
+		}
+		return f
+	}
+	var b strings.Builder
+	b.WriteString("\uFEFF时间,操作,模型,内容摘要,计量单位,数量,token下限,token上限,预估金额,任务ID,状态,计费口径\n")
+	for _, e := range list {
+		row := []string{e.Time, e.Action, e.Model, e.Summary, e.UnitName,
+			fmt.Sprintf("%d", e.UnitCount), fmt.Sprintf("%d", e.TokenMin),
+			fmt.Sprintf("%d", e.TokenMax), e.AmountText, e.TaskID, e.Status, e.Detail}
+		cells := make([]string, len(row))
+		for i, c := range row {
+			cells[i] = csvEscape(c)
+		}
+		b.WriteString(strings.Join(cells, ",") + "\n")
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="clipforge-bill.csv"`)
+	io.WriteString(w, b.String())
+}
+
+// ============================================================
+// CosyVoice TTS WebSocket 代理
+// 浏览器 ⇄ 本地(ws://127.0.0.1:8731/api/tts/ws) ⇄ DashScope(wss)
+// 服务端注入 Authorization,前端不接触 Key。消息原样双向转发。
+// ============================================================
+
+func ttsWSProxy(w http.ResponseWriter, r *http.Request) {
+	key := getAPIKey()
+	if key == "" {
+		http.Error(w, `{"error":"未设置 API Key,请先在设置页填入"}`, http.StatusUnauthorized)
+		return
+	}
+	up := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+	client, err := up.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer client.Close()
+
+	hdr := http.Header{}
+	hdr.Set("Authorization", "Bearer "+key)
+	hdr.Set("user-agent", "clipforge")
+	upstream, _, err := websocket.DefaultDialer.Dial(
+		"wss://dashscope.aliyuncs.com/api-ws/v1/inference", hdr)
+	if err != nil {
+		client.WriteMessage(websocket.TextMessage,
+			[]byte(`{"header":{"event":"task-failed","error_message":"无法连接 DashScope: `+err.Error()+`"}}`))
+		return
+	}
+	defer upstream.Close()
+
+	go func() { // 浏览器 → DashScope
+		for {
+			mt, data, err := client.ReadMessage()
+			if err != nil {
+				return
+			}
+			if err := upstream.WriteMessage(mt, data); err != nil {
+				return
+			}
+		}
+	}()
+	for { // DashScope → 浏览器
+		mt, data, err := upstream.ReadMessage()
+		if err != nil {
+			return
+		}
+		if err := client.WriteMessage(mt, data); err != nil {
+			return
+		}
+	}
+}
+
+// ============================================================
 // 路由
 // ============================================================
 
@@ -370,6 +574,18 @@ func main() {
 
 	// 上传本地文件到 DashScope OSS
 	mux.HandleFunc("/api/upload", uploadLocalFile)
+
+	// 文生图(同步接口,直接代理)
+	mux.HandleFunc("/api/image", func(w http.ResponseWriter, r *http.Request) {
+		dashScopeProxy(w, r, "/services/aigc/multimodal-generation/generation")
+	})
+
+	// 账单
+	mux.HandleFunc("/api/bill", handleBill)
+	mux.HandleFunc("/api/bill/export", handleBillExport)
+
+	// CosyVoice TTS WebSocket 代理
+	mux.HandleFunc("/api/tts/ws", ttsWSProxy)
 
 	srv := &http.Server{
 		Addr:              listenAddr,

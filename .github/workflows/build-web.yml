@@ -17,39 +17,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: 编译 ClipForge (${{ matrix.os }} ${{ matrix.arch }})
+  # Linux 原生窗口版:内嵌 webkit2gtk(需 CGO),只能在 Linux runner 上编译。
+  # ubuntu-24.04-arm 是免费公开仓库 arm64 runner,原生编译 arm64 无需交叉工具链。
+  linux-window:
+    name: Linux 窗口版 (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: windows
+          - os: ubuntu-24.04
             arch: amd64
-            goos: windows
-            goarch: amd64
-            ext: .exe
-          - os: windows
+          - os: ubuntu-24.04-arm
             arch: arm64
-            goos: windows
-            goarch: arm64
-            ext: .exe
-          - os: macos
-            arch: arm64
-            goos: darwin
-            goarch: arm64
-            ext: ''
-          - os: macos
-            arch: amd64
-            goos: darwin
-            goarch: amd64
-            ext: ''
-          - os: linux
-            arch: amd64
-            goos: linux
-            goarch: amd64
-            ext: ''
 
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,90 +39,24 @@ jobs:
         with:
           go-version: 1.23.x
 
-      - name: 编译
+      - name: 装 webkit2gtk 开发头文件
         shell: bash
-        working-directory: web/server
         run: |
-          go build -ldflags="-s -w" -o ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
-          ls -la ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev pkg-config
 
-      - name: 打包(单文件,前端已内嵌)
+      - name: 编译(CGO,内嵌 webkit 窗口)
         shell: bash
         run: |
-          mkdir -p web/release
-          zip -j web/release/clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip \
-            clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
-          ls -la web/release/clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip
+          python3 web/build-pkgs.py --only linux-${{ matrix.arch }} --cgo --deb
+          ls -la web/release/
 
       - name: 上传 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: clipforge-${{ matrix.os }}-${{ matrix.arch }}
-          path: web/release/clipforge-${{ matrix.os }}-${{ matrix.arch }}.zip
+          name: clipforge-linux-${{ matrix.arch }}
+          path: |
+            web/release/clipforge-linux-${{ matrix.arch }}.zip
+            web/release/clipforge_3.2.0_${{ matrix.arch }}.deb
           if-no-files-found: error
           retention-days: 14
-
-  release:
-    name: 发布 Release
-    needs: build
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: 确认 zip 齐全
-        working-directory: artifacts
-        run: |
-          ls -la
-          for f in clipforge-windows-amd64 clipforge-windows-arm64 clipforge-macos-arm64 clipforge-macos-amd64 clipforge-linux-amd64; do
-            [ -f "$f.zip" ] || { echo "❌ 缺 $f.zip"; exit 1; }
-          done
-          echo "✅ 全部 zip 齐全"
-
-      - name: 创建 Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "ClipForge ${{ github.ref_name }}"
-          generate_release_notes: true
-          # 跨平台都发,新版不需要 make_latest: false
-          fail_on_unmatched_files: false
-          files: |
-            artifacts/clipforge-windows-amd64.zip
-            artifacts/clipforge-windows-arm64.zip
-            artifacts/clipforge-macos-arm64.zip
-            artifacts/clipforge-macos-amd64.zip
-            artifacts/clipforge-linux-amd64.zip
-          body: |
-            ## ClipForge · ${{ github.ref_name }}
-
-            AI 视频编辑助手 v2.0 - **全新 Go + HTML5 重写版**。
-
-            旧版 WinUI 3 在虚拟机/裸 dotnet CLI 打包环境里有太多坑,
-            这一版改用 Go 单文件后端 + HTML/CSS/JS 前端,
-            跨 Windows / macOS / Linux,启动即用,体积小。
-
-            ### 下载
-
-            - **Windows amd64**:大多数 Intel/AMD 桌面和笔记本
-            - **Windows ARM64**:Surface Pro X、骁龙本等 ARM 设备
-            - **macOS Apple Silicon**:M1/M2/M3 等
-            - **macOS Intel**:2019 前的 Mac
-            - **Linux amd64**:常见发行版
-
-            ### 使用
-
-            1. 解压 zip
-            2. 双击 `clipforge.exe`(或 macOS/Linux 双击 `clipforge`)
-            3. **Windows** 自动弹出内嵌 WebView2(Chromium)应用窗口;macOS/Linux 自动打开浏览器
-            4. 在「设置」填入 DashScope API Key
-            5. 开始用
-
-            ### 功能
-
-            - 声音克隆(cosyvoice-v3.5-plus)
-            - 图生视频(wan2.6-i2v)
-            - API Key 存本地明文 yml(请勿分享)

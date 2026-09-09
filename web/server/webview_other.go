@@ -1,4 +1,4 @@
-//go:build !windows
+//go:build !windows && !linux
 
 // 非 Windows 平台 UI 唤起：打开系统默认浏览器。
 // (macOS 用 open, Linux 用 xdg-open)
