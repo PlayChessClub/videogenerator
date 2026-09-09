@@ -33,10 +33,23 @@ final class ImageStudioModel: ObservableObject {
         }
     }
 
+    /// 确认后写入账单（记录本次估算明细）
+    private func recordBill(prompt: String) {
+        let est = TokenEstimator.estimateImage(model: model, size: size, n: count)
+        let summary = String(prompt.prefix(60))
+        let entry = BillEntry(
+            action: "文生图", model: model, summary: summary,
+            unitName: "张", unitCount: count,
+            tokenMin: est.tokenMin, tokenMax: est.tokenMax,
+            amountText: est.amount, detail: est.detail)
+        BillStore.shared.add(entry)
+    }
+
     private func performGenerate(prompt: String) async {
         error = nil; generated = []; busy = true
         status = "提交生成请求…"
         defer { busy = false }
+        recordBill(prompt: prompt)
         do {
             let req = DashScopeClient.ImageRequest(
                 prompt: prompt, model: model, size: size,
@@ -84,17 +97,42 @@ struct ImageStudioView: View {
                             TextEditor(text: $m.prompt).frame(height: 90).hideScrollBackground()
                                 .padding(8).glassField
 
-                            HStack(spacing: 16) {
-                                Picker("模型", selection: $m.model) {
-                                    ForEach(FixedModel.imageModels, id: \.self) { Text($0).tag($0) }
+                            // 模型名较长，用菜单避免撑爆布局；尺寸/张数用分段控件
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    Text("模型").font(.caption).foregroundColor(Pal.muted)
+                                        .frame(width: 32, alignment: .leading)
+                                    Picker("", selection: $m.model) {
+                                        ForEach(FixedModel.imageModels, id: \.self) { Text($0).tag($0) }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .labelsHidden()
+                                    .frame(maxWidth: 220, alignment: .leading)
+                                    Spacer()
                                 }
-                                Picker("尺寸", selection: $m.size) {
-                                    ForEach(m.sizes, id: \.self) { Text($0).tag($0) }
+                                HStack(spacing: 10) {
+                                    Text("尺寸").font(.caption).foregroundColor(Pal.muted)
+                                        .frame(width: 32, alignment: .leading)
+                                    Picker("", selection: $m.size) {
+                                        ForEach(m.sizes, id: \.self) { Text($0).tag($0) }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .labelsHidden()
+                                    .frame(maxWidth: 300, alignment: .leading)
+                                    Spacer()
                                 }
-                                Picker("张数", selection: $m.count) {
-                                    ForEach([1, 2, 3, 4], id: \.self) { Text("\($0)张").tag($0) }
+                                HStack(spacing: 10) {
+                                    Text("张数").font(.caption).foregroundColor(Pal.muted)
+                                        .frame(width: 32, alignment: .leading)
+                                    Picker("", selection: $m.count) {
+                                        ForEach([1, 2, 3, 4], id: \.self) { Text("\($0)张").tag($0) }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .labelsHidden()
+                                    .frame(maxWidth: 220, alignment: .leading)
+                                    Spacer()
                                 }
-                            }.pickerStyle(.segmented)
+                            }
 
                             Toggle("智能扩写 prompt_extend", isOn: $m.promptExtend).switchToggle()
 
@@ -135,6 +173,7 @@ struct ImageStudioView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
             .hideScrollBackground()
 

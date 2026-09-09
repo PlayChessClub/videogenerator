@@ -48,9 +48,27 @@ final class VideoStudioModel: ObservableObject {
         confirm.confirmAndRun(est) { [weak self] in await self?.performSubmit() }
     }
 
+    /// 确认后写入账单（记录本次估算明细）
+    private func recordBill() {
+        let est = TokenEstimator.estimateVideo(
+            prompt: prompt, resolution: resolution, duration: duration)
+        let entry = BillEntry(
+            action: "图生视频", model: FixedModel.videoI2V,
+            summary: String(prompt.prefix(60)),
+            unitName: "秒", unitCount: duration,
+            tokenMin: est.tokenMin, tokenMax: est.tokenMax,
+            amountText: est.amount, detail: est.detail)
+        BillStore.shared.add(entry)
+        lastBillId = entry.id
+    }
+
+    /// 记住本次账单条目，任务有结果后回填 taskId / 状态
+    private var lastBillId: UUID?
+
     private func performSubmit() async {
         error = nil; videoLocalURL = nil; busy = true; elapsed = 0
         defer { busy = false }
+        recordBill()
         do {
             // 准备图片 URL
             var img = imageURL.trimmingCharacters(in: .whitespaces)
@@ -77,6 +95,9 @@ final class VideoStudioModel: ObservableObject {
             status = "提交视频生成任务…"
             let tid = try await client.submitVideoTask(req)
             taskId = tid
+            if let bid = lastBillId {
+                BillStore.shared.update(id: bid, taskId: tid, status: "生成中")
+            }
             status = "任务已提交，生成中（通常 1-5 分钟）…"
             try await poll(tid)
         } catch {

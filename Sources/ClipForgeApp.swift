@@ -30,6 +30,7 @@ struct RootView: View {
         case image = "图片生成"
         case video = "视频生成"
         case timeline = "剪辑时间线"
+        case bill = "账单"
         case settings = "设置"
         var id: String { rawValue }
         var symbol: String {
@@ -38,6 +39,7 @@ struct RootView: View {
             case .image: return "photo.on.rectangle"
             case .video: return "film"
             case .timeline: return "scissors"
+            case .bill: return "yensign.circle"
             case .settings: return "gearshape"
             }
         }
@@ -54,6 +56,7 @@ struct RootView: View {
                     case .image: ImageStudioView().transition(.opacity)
                     case .video: VideoStudioView().transition(.opacity)
                     case .timeline: TimelineView().transition(.opacity)
+                    case .bill: BillView().transition(.opacity)
                     case .settings: SettingsView().transition(.opacity)
                     }
                 }

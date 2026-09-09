@@ -53,6 +53,7 @@ final class VoiceStudioModel: ObservableObject {
 
     private func performCreateVoice(url: String) async {
         error = nil
+        recordCloneBill()
         busy = true; status = "提交音色克隆请求…"
         defer { busy = false }
         do {
@@ -76,6 +77,7 @@ final class VoiceStudioModel: ObservableObject {
 
     private func performCloneFromLocal(_ f: URL) async {
         error = nil; busy = true
+        recordCloneBill()
         status = "上传参考音频到临时 OSS…"
         defer { busy = false }
         do {
@@ -136,8 +138,33 @@ final class VoiceStudioModel: ObservableObject {
         }
     }
 
+    // MARK: - 账单记录
+
+    private func recordTTSBill() {
+        let est = TokenEstimator.estimateTTS(text: text)
+        let entry = BillEntry(
+            action: "语音合成", model: FixedModel.tts,
+            summary: String(text.prefix(60)),
+            unitName: "字符", unitCount: text.count,
+            tokenMin: est.tokenMin, tokenMax: est.tokenMax,
+            amountText: est.amount, detail: est.detail)
+        BillStore.shared.add(entry)
+    }
+
+    private func recordCloneBill() {
+        let est = TokenEstimator.estimateVoiceClone()
+        let entry = BillEntry(
+            action: "声音克隆", model: FixedModel.voiceEnrollment,
+            summary: "音色前缀 \(prefix)",
+            unitName: "次", unitCount: 1,
+            tokenMin: est.tokenMin, tokenMax: est.tokenMax,
+            amountText: est.amount, detail: est.detail)
+        BillStore.shared.add(entry)
+    }
+
     private func performSynthesize(voice: String) async {
         error = nil
+        recordTTSBill()
         busy = true; status = "连接合成服务…"; progress = 0.1
         defer { busy = false }
         do {
