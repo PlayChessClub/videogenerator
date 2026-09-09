@@ -9,6 +9,17 @@ enum FixedModel {
     static let videoI2V = "wan2.6-i2v"
     static let imageDefault = "qwen-image-2.0"
     static let imageModels = ["qwen-image-2.0", "qwen-image-2.0-pro", "wan2.7-image", "wan2.7-image-pro"]
+
+    /// 视频生成模型（文生视频 t2v 无需首帧图；图生视频 i2v 需要）
+    static let videoModels = ["wan2.6-i2v", "wan2.7-i2v", "wan2.6-i2v-flash", "wan2.7-t2v", "wan2.6-t2v"]
+
+    /// 是否为文生视频（不需要首帧图片）
+    static func isTextToVideo(_ m: String) -> Bool { m.hasSuffix("-t2v") }
+
+    /// 中文能力名
+    static func videoKindName(_ m: String) -> String {
+        isTextToVideo(m) ? "文生视频" : "图生视频"
+    }
 }
 
 enum DashScope {

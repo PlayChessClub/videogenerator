@@ -93,7 +93,15 @@ struct ImageStudioView: View {
 
                     GlassCard("文生图", subtitle: "按张计费，生成前会提示预计消耗") {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("图片描述").font(.caption).foregroundColor(Pal.muted)
+                            HStack {
+                                Text("图片描述").font(.caption).foregroundColor(Pal.muted)
+                                Spacer()
+                                Button {
+                                    m.prompt = PromptBank.randomImage()
+                                } label: {
+                                    Label("试试手气", systemImage: "dice")
+                                }.glassButton()
+                            }
                             TextEditor(text: $m.prompt).frame(height: 90).hideScrollBackground()
                                 .padding(8).glassField
 

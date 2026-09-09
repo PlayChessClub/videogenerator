@@ -64,9 +64,22 @@ enum TokenEstimator {
             billedBy: .videoSeconds(0, "720P")),
     ]
 
-    /// 720P/1080P 各自的单价（元/秒）
-    private static func videoRate(forResolution res: String) -> Double {
-        res == "1080P" ? 1.0 : 0.6
+    /// 视频模型单价表（元/秒，华北2北京按量付费）
+    /// 值：[720P 有声, 1080P 有声, 720P 无声, 1080P 无声]
+    private static let videoRates: [String: [Double]] = [
+        "wan2.6-i2v":       [0.6, 1.0, 0.6, 1.0],
+        "wan2.7-i2v":       [0.6, 1.0, 0.6, 1.0],
+        "wan2.6-t2v":       [0.6, 1.0, 0.6, 1.0],
+        "wan2.7-t2v":       [0.6, 1.0, 0.6, 1.0],
+        // flash 系列：有声/无声不同价（对应「生成音频轨 audio」开关）
+        "wan2.6-i2v-flash": [0.3, 0.5, 0.15, 0.25],
+    ]
+
+    /// 查询某视频模型在指定分辨率 + 是否有声下的单价（元/秒）
+    static func videoRate(model: String, resolution: String, audio: Bool) -> Double {
+        let t = videoRates[model] ?? [0.6, 1.0, 0.6, 1.0]
+        let idx = (resolution == "1080P" ? 1 : 0) + (audio ? 0 : 2)
+        return t[idx]
     }
 
     /// 估算一次语音合成（文本 → mp3）
@@ -79,17 +92,18 @@ enum TokenEstimator {
                             detail: "输入 \(chars) 字符 · ¥1.5/万字符")
     }
 
-    /// 估算一次图生视频
-    static func estimateVideo(prompt: String, resolution: String, duration: Int) -> Estimate {
-        let rate = videoRate(forResolution: resolution)
+    /// 估算一次视频生成（文生视频 t2v / 图生视频 i2v 统一入口）
+    static func estimateVideo(model: String, prompt: String, resolution: String,
+                              duration: Int, audio: Bool) -> Estimate {
+        let rate = videoRate(model: model, resolution: resolution, audio: audio)
         let amount = rate * Double(duration)
-        // 视觉 token 当量：以 720P 的 tokenPerUnit 为基准，按单价比例放大到 1080P
-        let base = costTable[FixedModel.videoI2V]?.tokenPerUnit ?? 120_000
-        let tokenPerSecond = Int(Double(base) * rate / 0.6)
+        // 视觉 token 当量：以 ¥0.6/s 为基准量级，按单价比例缩放
+        let tokenPerSecond = Int(120_000 * rate / 0.6)
         let tokenEst = tokenPerSecond * duration
-        return makeEstimate(model: FixedModel.videoI2V, action: "图生视频",
+        let audioText = audio ? "有声" : "无声"
+        return makeEstimate(model: model, action: FixedModel.videoKindName(model),
                             tokenEst: tokenEst, amount: amount,
-                            detail: "\(resolution) · \(duration)s · ¥\(rateTrunc(rate))/秒")
+                            detail: "\(resolution) · \(duration)s · \(audioText) · ¥\(rateTrunc(rate))/秒")
     }
 
     /// 估算一次声音克隆（金额波动大，纯提醒为主）

@@ -175,8 +175,9 @@ final class DashScopeClient {
     // MARK: - 视频生成任务 (wan2.6-i2v)
 
     struct VideoRequest {
+        var model: String = FixedModel.videoI2V
         var prompt: String
-        var imageURL: String
+        var imageURL: String?          // 文生视频(t2v)不需要首帧图
         var audioURL: String?
         var resolution: String = "720P"
         var duration: Int = 10
@@ -186,7 +187,8 @@ final class DashScopeClient {
     }
 
     func submitVideoTask(_ r: VideoRequest) async throws -> String {
-        var input: [String: Any] = ["prompt": r.prompt, "img_url": r.imageURL]
+        var input: [String: Any] = ["prompt": r.prompt]
+        if let img = r.imageURL, !img.isEmpty { input["img_url"] = img }
         if let a = r.audioURL { input["audio_url"] = a }
         var params: [String: Any] = [
             "resolution": r.resolution,
@@ -195,7 +197,7 @@ final class DashScopeClient {
             "audio": r.audioEnabled,
         ]
         if r.shotType == "multi" { params["shot_type"] = "multi" }
-        let body: [String: Any] = ["model": FixedModel.videoI2V, "input": input, "parameters": params]
+        let body: [String: Any] = ["model": r.model, "input": input, "parameters": params]
         let json = try await postJSON(
             "\(DashScope.httpBase)/services/aigc/video-generation/video-synthesis",
             body: body,

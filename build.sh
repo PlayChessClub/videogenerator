@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="1.4.0"
+VERSION="1.5.0"
 MIN_OS="11.0"
 BUILD_DIR="build"
 SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"

@@ -70,6 +70,14 @@ struct SettingsView: View {
                     }
                 }
 
+                GlassCard("价目表", subtitle: "华北2（北京）按量付费 · 仅供参考，以官方账单为准") {
+                    VStack(alignment: .leading, spacing: 16) {
+                        PriceSection(title: "视频生成", symbol: "film", tint: Pal.purple, rows: PriceList.video)
+                        PriceSection(title: "图片生成", symbol: "photo.on.rectangle", tint: Pal.teal, rows: PriceList.image)
+                        PriceSection(title: "语音", symbol: "waveform", tint: Pal.orange, rows: PriceList.audio)
+                    }
+                }
+
                 Spacer(minLength: 8)
             }
             .frame(maxWidth: .infinity)
@@ -103,5 +111,36 @@ struct ModelRow: View {
         }
         .padding(10)
         .glassRowStyle
+    }
+}
+
+// 价目表分组
+struct PriceSection: View {
+    let title: String; let symbol: String; let tint: Color; let rows: [PriceRow]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol).foregroundColor(tint)
+                Text(title).font(.subheadline).bold()
+            }
+            VStack(spacing: 0) {
+                ForEach(rows) { r in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(r.name).frame(width: 92, alignment: .leading)
+                            .font(.caption).foregroundColor(Pal.muted)
+                        Text(r.model).monospacedFont(12)
+                            .lineLimit(1).truncationMode(.middle)
+                        Spacer()
+                        Text(r.price).font(.caption).foregroundColor(Pal.green)
+                    }
+                    .padding(.vertical, 7)
+                    .padding(.horizontal, 10)
+                    if r.id != rows.last?.id {
+                        Divider().opacity(0.3)
+                    }
+                }
+            }
+            .glassRowStyle
+        }
     }
 }

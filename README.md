@@ -13,11 +13,12 @@
 
 - **声音工作室**：CosyVoice 声音克隆（voice enrollment）+ 文本转语音。支持公网音频 URL 或本地音频上传，音色状态自动轮询，合成参数可调（音量 / 语速 / 音高）。
 - **图片生成**：文生图（同步接口，无需轮询）。模型可选 `qwen-image-2.0`（默认）/ `qwen-image-2.0-pro` / `wan2.7-image` / `wan2.7-image-pro`，尺寸与张数可控，结果自动下载并收录素材库。
-- **视频生成**：图生视频（首帧 + 可选配音），异步任务提交 + 自动轮询 + 结果下载。分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关可控。
+- **视频生成**：支持文生视频（`wan2.6-t2v`/`wan2.7-t2v`，无需首帧图）与图生视频（`wan2.6-i2v`/`wan2.7-i2v`/`wan2.6-i2v-flash`，需首帧图），模型可切换，异步任务提交 + 自动轮询 + 结果下载。分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关可控（flash 模型无声更省）。
 - **剪辑时间线**：把生成的视频按顺序拼接导出，支持「保留原声」或「整体替换配音」两种模式，纯 AVFoundation 实现，无外部依赖。
 - **消费预估值**：在发起语音合成 / 声音克隆 / 图生视频 / 文生图前，会弹窗提示**预计消耗的 token 区间（±30%）** 与**预估金额**，确认后才真正调用模型，避免无意产生费用。
 - **生成账单**：每次确认生成时自动记录一条明细（时间 / 操作 / 模型 / 内容摘要 / 计量单位与数量 / token 区间 / 预估金额 / 任务 ID / 状态），账本存于 `~/Library/Application Support/ClipForge/bill.jsonl`，「账单」页可查看今日/本月/累计汇总，并一键**导出 CSV** 用于核对实际扣费。
-- **设置**：DashScope API Key 存于 macOS 钥匙串（`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`，仅本机、解锁后可用），可随时更换。
+- **设置**：DashScope API Key 存于 macOS 钥匙串（`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`，仅本机、解锁后可用），可随时更换；内置**价目表**（视频 / 图片 / 语音）供费用参考。
+- **试试手气**：视频生成与图片生成页均提供「🎲 试试手气」按钮，一键随机填入精选 Prompt。
 
 ## 关于阿里云 Token Plan（重要）
 
@@ -49,7 +50,9 @@ Slash Command / Agent 扩展机制接入。
 |---|---|
 | 语音合成 | `cosyvoice-v3.5-plus` |
 | 音色复刻 | `voice-enrollment`（target_model 指向 cosyvoice-v3.5-plus） |
-| 图生视频 | `wan2.6-i2v` |
+| 文生视频 | `wan2.6-t2v` / `wan2.7-t2v` |
+| 图生视频 | `wan2.6-i2v`（默认）/ `wan2.7-i2v` / `wan2.6-i2v-flash` |
+| 文生图 | `qwen-image-2.0`（默认）/ `qwen-image-2.0-pro` / `wan2.7-image` / `wan2.7-image-pro` |
 
 ## 构建
 
@@ -65,7 +68,7 @@ Slash Command / Agent 扩展机制接入。
 
 ## 安装与首次运行
 
-1. 双击 `ClipForge-1.4.0.dmg`，把 ClipForge 拖入「应用程序」。
+1. 双击 `ClipForge-1.5.0.dmg`，把 ClipForge 拖入「应用程序」。
 2. 首次打开若被 Gatekeeper 拦截（ad-hoc 签名，未经苹果公证），右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。
 3. 进入「设置」填入你的 DashScope API Key（阿里云百炼控制台创建，`sk-` 开头），保存后即可使用。
 
@@ -125,7 +128,9 @@ ClipForge/
 │   ├── TimelineView.swift
 │   ├── SettingsView.swift
 │   ├── TokenEstimator.swift       # 费用/token 预估（语音按字符、视频按秒、生图按张、克隆按出账）
-│   └── TokenConfirmOverlay.swift  # 生成前 token 消耗确认浮层（含 ±30% 区间）
+│   ├── TokenConfirmOverlay.swift  # 生成前 token 消耗确认浮层（含 ±30% 区间）
+│   ├── PriceList.swift            # 价目表数据（视频/图片/语音，设置页展示）
+│   └── PromptBank.swift           # 「试试手气」随机提示词库
 ├── Tools/
 │   ├── MakeIcon.swift            # 应用图标生成器
 │   └── MakeDMGBackground.swift   # DMG 安装窗口背景图

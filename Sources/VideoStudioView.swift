@@ -6,6 +6,7 @@ final class VideoStudioModel: ObservableObject {
     @Published var prompt: String = "一幅都市奇幻艺术的场景。一个由喷漆画成的少年从混凝土墙上活过来，边 rap 边摆出充满活力的说唱姿势，夜晚铁路桥下，街灯孤照，电影感氛围。"
     @Published var imageURL: String = ""
     @Published var audioURL: String = ""
+    @Published var model: String = FixedModel.videoI2V
     @Published var resolution: String = "720P"
     @Published var duration: Int = 10
     @Published var shotType: String = "single"
@@ -40,20 +41,29 @@ final class VideoStudioModel: ObservableObject {
 
     func useLibraryAudio(_ url: URL) { localAudio = url }
 
+    /// 当前是否为文生视频（不需要首帧图片）
+    var isTextToVideo: Bool { FixedModel.isTextToVideo(model) }
+
+    /// 当前动作名（文生视频 / 图生视频）
+    var actionName: String { FixedModel.videoKindName(model) }
+
+    /// 统一构造本次估算
+    private func currentEstimate() -> TokenEstimator.Estimate {
+        TokenEstimator.estimateVideo(model: model, prompt: prompt,
+                                     resolution: resolution,
+                                     duration: duration, audio: audioEnabled)
+    }
+
     /// 入口：先弹 token 消耗确认，用户点「继续生成」后才真正执行
     func submit() {
-        // 提示词扩写与否影响估算，但视频按时长/分辨率计费，token 当量跟随该口径
-        let est = TokenEstimator.estimateVideo(
-            prompt: prompt, resolution: resolution, duration: duration)
-        confirm.confirmAndRun(est) { [weak self] in await self?.performSubmit() }
+        confirm.confirmAndRun(currentEstimate()) { [weak self] in await self?.performSubmit() }
     }
 
     /// 确认后写入账单（记录本次估算明细）
     private func recordBill() {
-        let est = TokenEstimator.estimateVideo(
-            prompt: prompt, resolution: resolution, duration: duration)
+        let est = currentEstimate()
         let entry = BillEntry(
-            action: "图生视频", model: FixedModel.videoI2V,
+            action: actionName, model: model,
             summary: String(prompt.prefix(60)),
             unitName: "秒", unitCount: duration,
             tokenMin: est.tokenMin, tokenMax: est.tokenMax,
@@ -74,18 +84,22 @@ final class VideoStudioModel: ObservableObject {
             var img = imageURL.trimmingCharacters(in: .whitespaces)
             if img.isEmpty, let f = localImage {
                 status = "上传图片到临时 OSS…"
-                img = try await client.uploadToOSS(model: FixedModel.videoI2V, fileURL: f)
+                img = try await client.uploadToOSS(model: model, fileURL: f)
             }
-            if img.isEmpty { throw APIError("请提供首帧图片（本地选择或填 URL）") }
+            // 文生视频（t2v）不需要首帧图；图生视频（i2v）必填
+            if img.isEmpty && !isTextToVideo {
+                throw APIError("请提供首帧图片（本地选择或填 URL），或改用文生视频模型")
+            }
 
             // 准备音频 URL（可选）
             var aud = audioURL.trimmingCharacters(in: .whitespaces)
             if aud.isEmpty, let f = localAudio {
                 status = "上传配音到临时 OSS…"
-                aud = try await client.uploadToOSS(model: FixedModel.videoI2V, fileURL: f)
+                aud = try await client.uploadToOSS(model: model, fileURL: f)
             }
 
             let req = DashScopeClient.VideoRequest(
+                model: model,
                 prompt: prompt, imageURL: img,
                 audioURL: aud.isEmpty ? nil : aud,
                 resolution: resolution, duration: duration,
@@ -150,20 +164,44 @@ struct VideoStudioView: View {
                             .warnBanner
                     }
 
-                    GlassCard("图生视频 · \(FixedModel.videoI2V)") {
+                    GlassCard("视频生成 · \(m.model)",
+                              subtitle: "\(m.actionName) · \(m.isTextToVideo ? "无需首帧图" : "需首帧图")") {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Prompt").font(.caption).foregroundColor(Pal.muted)
+                            Text("生成模型").font(.caption).foregroundColor(Pal.muted)
+                            Picker("模型", selection: $m.model) {
+                                ForEach(FixedModel.videoModels, id: \.self) { mo in
+                                    Text("\(mo) · \(FixedModel.videoKindName(mo))").tag(mo)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(maxWidth: 320, alignment: .leading)
+
+                            HStack {
+                                Text("Prompt").font(.caption).foregroundColor(Pal.muted)
+                                Spacer()
+                                Button {
+                                    m.prompt = PromptBank.randomVideo()
+                                } label: {
+                                    Label("试试手气", systemImage: "dice")
+                                }.glassButton()
+                            }
                             TextEditor(text: $m.prompt).frame(height: 84).hideScrollBackground()
                                 .padding(8).glassField
 
-                            Text("首帧图片（必填）").font(.caption).foregroundColor(Pal.muted)
-                            HStack {
-                                Button { m.pickImage() } label: {
-                                    Label(m.localImage?.lastPathComponent ?? "选择本地图片", systemImage: "photo.badge.plus")
-                                }.glassButton()
-                                TextField("或填公网图片 URL", text: $m.imageURL)
-                                    .textFieldStyle(.plain).padding(10)
-                                    .glassField
+                            if m.isTextToVideo {
+                                Text("当前为文生视频模型，仅凭 Prompt 生成，无需首帧图片。")
+                                    .font(.caption).foregroundColor(Pal.muted)
+                            } else {
+                                Text("首帧图片（必填）").font(.caption).foregroundColor(Pal.muted)
+                                HStack {
+                                    Button { m.pickImage() } label: {
+                                        Label(m.localImage?.lastPathComponent ?? "选择本地图片", systemImage: "photo.badge.plus")
+                                    }.glassButton()
+                                    TextField("或填公网图片 URL", text: $m.imageURL)
+                                        .textFieldStyle(.plain).padding(10)
+                                        .glassField
+                                }
                             }
 
                             Text("配音音频（可选）").font(.caption).foregroundColor(Pal.muted)
@@ -199,6 +237,12 @@ struct VideoStudioView: View {
 
                             Toggle("智能扩写 prompt_extend", isOn: $m.promptExtend).switchToggle()
                             Toggle("生成音频轨 audio", isOn: $m.audioEnabled).switchToggle()
+                            if m.model == "wan2.6-i2v-flash" {
+                                Text(m.audioEnabled
+                                     ? "flash 有声：¥0.3/s(720P) · ¥0.5/s(1080P)"
+                                     : "flash 无声更省：¥0.15/s(720P) · ¥0.25/s(1080P)")
+                                    .font(.caption).foregroundColor(Pal.muted)
+                            }
 
                             HStack {
                                 Button { m.submit() } label: {
