@@ -52,7 +52,10 @@ def tar_gz(entries, dirs=()):
     return buf.getvalue()
 
 def make_deb(bin_path, goarch):
-    icon = os.path.join(ROOT, "build", "AppIcon.iconset", "icon_512x512@2x.png")
+    # 图标:优先仓库内置 web/assets(CI 可用),回退本地 build 产物
+    icon = os.path.join(ROOT, "web", "assets", "icon-512.png")
+    if not os.path.exists(icon):
+        icon = os.path.join(ROOT, "build", "AppIcon.iconset", "icon_512x512@2x.png")
     lic = os.path.join(ROOT, "LICENSE")
     desktop = ("[Desktop Entry]\nType=Application\nName=ClipForge AI\n"
                "Comment=AI 视频/图片/语音生成客户端(本地 API 代理)\n"
