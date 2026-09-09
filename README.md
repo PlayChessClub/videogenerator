@@ -9,11 +9,11 @@
 
 | 平台 | 形态 | 功能覆盖 |
 |---|---|---|
-| **macOS 11+** | 原生 SwiftUI，arm64+x86_64 通用二进制，.pkg 安装 | 🟢 全功能：核心生成 + 时间线拼接 + 内置音色素材 + 试试手气 Pro（主力） |
-| **Windows 11** | Go + HTML5 单文件 exe（内嵌 WebView2），zip | 🟡 核心生成（文生图 / 多模型视频 / 声音克隆 / 语音合成 / 账本 / 价目 / 消耗确认 / 基础本地随机 prompt） |
-| **Linux** | Go + HTML5，deb/zip（CLI 菜单或桌面开浏览器） | 🟡 与 Windows 相同核心范围 |
+| **macOS 11+** | 原生 SwiftUI，arm64+x86_64 通用二进制，.pkg 安装（本仓库） | 🟢 全功能：核心生成 + 时间线拼接 + 内置音色素材 + 试试手气 Pro（主力） |
+| **Windows / Linux（Web 版）** | 详见独立仓库 **[clipforge-web](https://github.com/PlayChessClub/clipforge-web)**（本仓库已迁出 `web/`） | 独立演进，互不影响 |
 
-> 说明：**Web/Go 版不再把 macOS 列为支持平台**——macOS 请用上方原生 SwiftUI 版；darwin 上运行 `web/`（`--cli/--web`）仅为本地开发调试，非正式发布通道。
+> 说明：原 Go Web 版（Windows WebView2 / Linux CLI+浏览器）已从本仓库**单列拆分**至 `github.com/PlayChessClub/clipforge-web`；本仓库自此**只维护 macOS 原生版**，不再含 `web/`。<br>
+> darwin 上运行 `--cli/--web` 的开发调试迁移到该仓库；macOS 使用者请用上方原生版。
 
 平台上文中**「macOS 专属」**的差异能力（不随 Web 版发布，见「功能」）：
 - `试试手气 Pro`（embedding 选句 + qwen-plus 扩写两阶段，Web 仅有免费本地随机）
@@ -107,8 +107,7 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 ## 五、安装与使用
 
 - **macOS**：Releases 下载 `ClipForge-<ver>.pkg` 安装（向导含 Apache-2.0 许可协议）。pkg 为 ad-hoc 未签名，首次打开如被 Gatekeeper 拦，右键 → 打开或「隐私与安全性 → 仍要打开」。装后「设置」填 DashScope `sk-`。
-- **Windows**：解压 `clipforge-windows-{amd64,arm64}.zip` 双击 exe（内嵌 WebView2，缺运行时自动退回系统浏览器），在设置填 Key。web Key 密文明文存 `settings.yml`，注意保管、勿提交。
-- **Linux**：`sudo apt install ./clipforge_*.deb` → `clipforge`（终端菜单）或 `clipforge --web`；或解压 zip 直接跑。API Key 存 `~/.config/ClipForge/settings.yml`。
+- **Windows / Linux（Web 版）**：已迁至独立仓库 **[clipforge-web](https://github.com/PlayChessClub/clipforge-web)**，其 Releases 提供 exe / deb / zip 与该平台的安装与 Key 存储说明；请前往该仓库获取。
 - 全部安装包见 **Releases**：https://github.com/PlayChessClub/videogenerator/releases
 
 ### 产物保存（macOS「下载位置」）
@@ -132,11 +131,7 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 - 可 `SIGN_APP` / `SIGN_PKG` 环境变量做正式签名，否则 ad-hoc。
 
 ### Web（Windows / Linux）
-`web/server` 是 Go 单文件后端（`static/` 已 go:embed、第三方依赖已 vendor、无 CGO）。
-```bash
-python3 web/build-pkgs.py        # 本地产 Windows 双架构 zip；也跑静态 Linux 回退 ver
-```
-Linux deb/zip 由 CI（`.github/workflows/build-web.yml`，双原生 runner）在 push `v*` tag 时产出。
+已迁至独立仓库 **[clipforge-web](https://github.com/PlayChessClub/clipforge-web)**（Go + HTML5：Windows WebView2 exe；Linux CLI / deb 浏览器）。构建命令看该仓库的 `web/README.md`；本仓库不含 Web 源码。
 
 ---
 
@@ -162,13 +157,10 @@ Linux deb/zip 由 CI（`.github/workflows/build-web.yml`，双原生 runner）�
 │   ├── LuckyPromptButtons.swift  # 金色 Pro 按钮（两阶段）
 │   ├── DownloadLocation.swift    # 单一根目录的产物保存
 │   ├── BillStore.swift / ExportEngine.swift
-├── web/                 # Web 版（Windows + Linux）
-│   ├── build-pkgs.py
-│   ├── server/          # Go main.go + cli.go + static/（index/app/style）+ vendor/
-│   └── assets/icon-512.png
-├── Windows/             # ⚠️ 已归档 WinUI 3 实现（不构建，参考用）
-└── .github/workflows/build-web.yml
+├── Windows/             # ⚠️ 已归档的旧 WinUI3 实现，仅参考
+└── LICENSE              # Apache-2.0
 ```
+> macOS 原生 CI/发布步骤在本仓库 README「构建」节；Web（Windows/Linux）源码、CI 与发布已于拆分后归属独立仓库 [clipforge-web](https://github.com/PlayChessClub/clipforge-web)。
 
 ---
 
