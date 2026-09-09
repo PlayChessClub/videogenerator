@@ -190,5 +190,28 @@ hdiutil convert "$DMG_RW" -format UDZO -imagekey zlib-level=9 -o "$DMG" >/dev/nu
 rm -f "$DMG_RW" "$BG2X" "$BG1X" "$BG_TIFF" "$BUILD_DIR/dmg_layout.applescript"
 rm -rf "$STAGING"
 
+# 可选签名身份：若机器已有 Developer ID 证书则用正式签名，否则 ad-hoc
+#   SIGN_APP  : Developer ID Application 证书名/ID（签名 .app 与 .dmg）
+#   SIGN_PKG  : Developer ID Installer 证书名/ID（签名 .pkg）
+#   置空则降级 ad-hoc
+SIGN_APP="${SIGN_APP:-}"
+SIGN_PKG="${SIGN_PKG:-}"
+
+echo "==> [9/9] 打包 .pkg 安装包（dmg + pkg 双格式）"
+if [ -n "$SIGN_PKG" ]; then
+    PKG_SIGN_FLAG=(--sign "$SIGN_PKG")
+else
+    PKG_SIGN_FLAG=()
+fi
+PKG="$BUILD_DIR/ClipForge-${VERSION}.pkg"
+rm -f "$PKG"
+# 组件方式安装到 /Applications（不强制 root；避免每次都输管理员密码）
+pkgbuild --component "$APP" --install-location /Applications \
+    "${PKG_SIGN_FLAG[@]}" \
+    "$PKG" 2>"$BUILD_DIR/pkgbuild.log" || {
+      echo "  · pkgbuild 失败，见 $BUILD_DIR/pkgbuild.log"; cat "$BUILD_DIR/pkgbuild.log"; exit 1; }
+[ -f "$PKG" ] || { echo "  · pkg 打包失败，见 $BUILD_DIR/pkgbuild.log"; exit 1; }
+rm -f "$BUILD_DIR/pkgbuild.log"
+
 echo "==> 完成"
-ls -lh "$DMG" "$APP/Contents/MacOS/$APP_NAME"
+ls -lh "$DMG" "$PKG" "$APP/Contents/MacOS/$APP_NAME"
