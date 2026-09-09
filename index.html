@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClipForge · AI 视频编辑助手</title>
+<meta name="description" content="ClipForge 是一款 AI 视频/图片/语音创作工具，后端对接阿里云 DashScope 多模态模型，支持声音克隆、文生图、文生视频、图生视频与剪辑时间线。">
+<style>
+  :root {
+    --bg: #0b0d14;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --text: #e8eaf2;
+    --muted: #9aa3b8;
+    --accent: #7c8cff;
+    --accent2: #4fd1c5;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(600px 400px at 15% 10%, rgba(124, 140, 255, 0.18), transparent 70%),
+      radial-gradient(700px 500px at 85% 20%, rgba(79, 209, 197, 0.12), transparent 70%),
+      radial-gradient(600px 600px at 50% 90%, rgba(255, 120, 200, 0.08), transparent 70%);
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    background: rgba(11, 13, 20, 0.6);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo .dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 0 12px rgba(124, 140, 255, 0.8);
+  }
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    margin-left: 22px;
+    font-size: 14px;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--text); }
+
+  .hero { text-align: center; padding: 110px 0 70px; }
+  .hero h1 {
+    font-size: clamp(34px, 6vw, 56px);
+    font-weight: 800;
+    background: linear-gradient(120deg, #fff 20%, var(--accent) 55%, var(--accent2) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p.sub {
+    max-width: 640px;
+    margin: 20px auto 0;
+    color: var(--muted);
+    font-size: 17px;
+  }
+  .hero .cta { margin-top: 36px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 13px 28px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(120deg, var(--accent), #a78bfa);
+    color: #fff;
+    box-shadow: 0 8px 30px rgba(124, 140, 255, 0.35);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(124, 140, 255, 0.5); }
+  .btn-ghost {
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    background: var(--card);
+    backdrop-filter: blur(10px);
+  }
+  .btn-ghost:hover { transform: translateY(-2px); background: rgba(255,255,255,0.1); }
+
+  .notice {
+    margin: 26px auto 0;
+    max-width: 760px;
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 190, 90, 0.35);
+    background: rgba(255, 190, 90, 0.08);
+    color: #ffd9a0;
+    font-size: 13.5px;
+  }
+
+  section { padding: 60px 0; }
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2::before {
+    content: "";
+    width: 6px; height: 26px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 26px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: transform 0.25s, border-color 0.25s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(124, 140, 255, 0.45); }
+  .card .icon { font-size: 28px; margin-bottom: 14px; display: block; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 14px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 18px;
+    overflow: hidden;
+    backdrop-filter: blur(14px);
+  }
+  th, td { padding: 14px 20px; text-align: left; font-size: 14.5px; }
+  th { color: var(--muted); font-weight: 600; background: rgba(255,255,255,0.04); }
+  td { border-top: 1px solid rgba(255,255,255,0.07); }
+  code {
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    background: rgba(124, 140, 255, 0.14);
+    color: #b8c0ff;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .status-green::before { content: "🟢 "; }
+  .status-blue::before { content: "🔵 "; }
+  .table-note { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  .download-box {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .step { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  .warn {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255, 190, 90, 0.08);
+    border: 1px solid rgba(255, 190, 90, 0.3);
+    color: #ffd9a0;
+    font-size: 13px;
+  }
+
+  ul.plain { list-style: none; }
+  ul.plain li {
+    padding: 10px 0 10px 30px;
+    position: relative;
+    color: var(--muted);
+    border-bottom: 1px dashed rgba(255,255,255,0.08);
+    font-size: 15px;
+  }
+  ul.plain li:last-child { border-bottom: none; }
+  ul.plain li::before { content: "✅"; position: absolute; left: 0; }
+  ul.plain li.no::before { content: "❌"; }
+  ul.plain li strong { color: var(--text); }
+
+  footer {
+    margin-top: 60px;
+    border-top: 1px solid var(--card-border);
+    padding: 34px 0 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    background: rgba(255,255,255,0.02);
+  }
+  footer .beian { margin-top: 8px; }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+
+<header>
+  <div class="wrap nav">
+    <div class="logo"><span class="dot"></span>ClipForge</div>
+    <nav>
+      <a href="#features">功能</a>
+      <a href="#platforms">平台</a>
+      <a href="#models">模型</a>
+      <a href="#download">下载</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <h1>ClipForge · AI 视频编辑助手</h1>
+    <p class="sub">AI 视频 / 图片 / 语音创作工具，后端固定对接阿里云 DashScope 多模态模型，API Key 可在应用内随时更换。</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/PlayChessClub/videogenerator/releases" target="_blank" rel="noopener">下载最新版本</a>
+      <a class="btn btn-ghost" href="https://github.com/PlayChessClub/videogenerator" target="_blank" rel="noopener">GitHub 仓库</a>
+    </div>
+    <div class="notice">⚠️ 模型固定、不可切换，以保证跨平台行为一致；唯一可配置项是 DashScope API Key。调用产生的费用由你的 DashScope 账户承担。</div>
+  </div>
+
+  <section id="features">
+    <h2>功能</h2>
+    <div class="grid">
+      <div class="card">
+        <span class="icon">🎙️</span>
+        <h3>声音工作室</h3>
+        <p>CosyVoice 声音克隆（voice enrollment）+ 文本转语音。支持公网音频 URL 或本地上传，音色状态自动轮询，音量 / 语速 / 音高可调。</p>
+      </div>
+      <div class="card">
+        <span class="icon">🖼️</span>
+        <h3>图片生成</h3>
+        <p>文生图同步接口，无需轮询。模型可选 <code>qwen-image-2.0</code> 系列与 <code>wan2.7-image</code> 系列，尺寸张数可控，结果自动收录素材库。</p>
+      </div>
+      <div class="card">
+        <span class="icon">🎬</span>
+        <h3>视频生成</h3>
+        <p>文生视频（<code>wan2.6-t2v</code> / <code>wan2.7-t2v</code>）与图生视频（<code>wan2.6-i2v</code> 系列及 flash 模型），异步任务 + 自动轮询 + 结果下载，分辨率 / 时长 / prompt 扩写可控。</p>
+      </div>
+      <div class="card">
+        <span class="icon">✂️</span>
+        <h3>剪辑时间线</h3>
+        <p>把生成的视频按顺序拼接导出，支持「保留原声」或「整体替换配音」，纯 AVFoundation 实现（macOS 版）。</p>
+      </div>
+      <div class="card">
+        <span class="icon">💰</span>
+        <h3>消费预估值</h3>
+        <p>发起生成前弹窗提示预计消耗 token 区间（±30%）与预估金额，确认后才调用模型，费用心中有数。</p>
+      </div>
+      <div class="card">
+        <span class="icon">🧾</span>
+        <h3>生成账单</h3>
+        <p>每次确认生成自动记录明细（时间 / 模型 / 计量 / token 区间 / 预估金额 / 任务 ID），账本页可看今日 / 本月 / 累计汇总，一键导出 CSV 核对实际扣费。</p>
+      </div>
+      <div class="card">
+        <span class="icon">🎲</span>
+        <h3>试试手气</h3>
+        <p>视频 / 图片生成页一键随机填入精选 Prompt，灵感卡住时点一下就有。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="platforms">
+    <h2>平台现状</h2>
+    <table>
+      <thead>
+        <tr><th>平台</th><th>形态</th><th>状态</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>macOS 11+</strong></td>
+          <td>原生 SwiftUI（arm64 + x86_64 通用二进制），.pkg 安装</td>
+          <td class="status-green">主力维护</td>
+        </tr>
+        <tr>
+          <td><strong>Windows 11</strong></td>
+          <td>Go + HTML5 单文件 exe（内嵌 WebView2 窗口），zip 发布</td>
+          <td class="status-blue">已冻结，仅保可用</td>
+        </tr>
+        <tr>
+          <td><strong>macOS / Linux</strong>（web 版）</td>
+          <td>同一 Go 二进制，启动后开浏览器</td>
+          <td class="status-blue">随 web 版保留</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="table-note">macOS 版采用 Liquid Glass 视觉语言：macOS 26 上呈现真·液态玻璃材质（glassEffect），低版本自动退化为毛玻璃。</p>
+  </section>
+
+  <section id="models">
+    <h2>固定模型</h2>
+    <table>
+      <thead>
+        <tr><th>能力</th><th>模型标识</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>语音合成</td><td><code>cosyvoice-v3.5-plus</code></td></tr>
+        <tr><td>音色复刻</td><td><code>voice-enrollment</code>（target_model 指向 cosyvoice-v3.5-plus）</td></tr>
+        <tr><td>文生视频</td><td><code>wan2.6-t2v</code> / <code>wan2.7-t2v</code></td></tr>
+        <tr><td>图生视频</td><td><code>wan2.6-i2v</code>（默认）/ <code>wan2.7-i2v</code> / <code>wan2.6-i2v-flash</code></td></tr>
+        <tr><td>文生图</td><td><code>qwen-image-2.0</code>（默认）/ <code>qwen-image-2.0-pro</code> / <code>wan2.7-image</code> / <code>wan2.7-image-pro</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 style="margin-top:44px">生图计费参考<span style="font-size:14px;color:var(--muted);font-weight:400">（华北2北京，按成功图片张数）</span></h2>
+    <table>
+      <thead>
+        <tr><th>模型</th><th>单价</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>qwen-image-2.0</code></td><td>¥0.20 / 张</td></tr>
+        <tr><td><code>wan2.7-image</code></td><td>¥0.20 / 张</td></tr>
+        <tr><td><code>qwen-image-2.0-pro</code></td><td>¥0.50 / 张</td></tr>
+        <tr><td><code>wan2.7-image-pro</code></td><td>¥0.50 / 张</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="tokenplan">
+    <h2>关于阿里云 Token Plan（重要）</h2>
+    <div class="card">
+      <p>ClipForge 的生成功能使用<strong style="color:var(--text)">普通百炼按量付费 API Key</strong>（<code>sk-</code> 开头，端点 <code>dashscope.aliyuncs.com</code>），<strong style="color:var(--text)">不使用</strong> Token Plan 专属 Key（<code>sk-sp-</code> 开头）。阿里云官方规定 Token Plan 专属 Key 仅限在 Claude Code / Cursor / Qwen Code 等 AI 编程与智能体工具中交互式使用，禁止用于自定义应用程序后端或自动化脚本；且图像/视频生成模型无法通过文本类 Base URL 直接调用。</p>
+      <ul class="plain" style="margin-top:16px">
+        <li>ClipForge 内生成 → 消耗<strong>普通百炼账户余额</strong>（按量付费）</li>
+        <li>在 Claude Code / Cursor 里用 Token Plan 生图 → 消耗<strong>套餐 Credits</strong>（走 Skill 机制）</li>
+        <li class="no">不要把 <code>sk-sp-</code> 开头的 Key 填进 ClipForge，否则可能违反订阅条款导致封禁</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="download">
+    <h2>下载与安装</h2>
+    <p style="color:var(--muted);margin-bottom:24px">所有版本安装包在 GitHub <a href="https://github.com/PlayChessClub/videogenerator/releases" target="_blank" rel="noopener" style="color:var(--accent2)">Releases</a> 页发布。</p>
+    <div class="download-box">
+      <div class="card">
+        <span class="icon">🍎</span>
+        <h3>macOS</h3>
+        <p class="step">下载 <code>ClipForge-&lt;版本&gt;.pkg</code>，双击按向导安装（先展示 Apache-2.0 许可协议，同意后输入管理员密码，装到 /Applications）。</p>
+        <p class="step">装好后进入「设置」填入 DashScope API Key（百炼控制台创建，<code>sk-</code> 开头，<strong style="color:var(--text)">存于钥匙串</strong>）。生成结果默认输出到 <code>~/Downloads/ClipForge/</code>。</p>
+        <div class="warn">pkg 为 ad-hoc 未签名。首次打开若被 Gatekeeper 拦截：右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。</div>
+      </div>
+      <div class="card">
+        <span class="icon">🪟</span>
+        <h3>Windows</h3>
+        <p class="step">下载 <code>clipforge-windows-amd64.zip</code>（Intel/AMD）或 <code>clipforge-windows-arm64.zip</code>（ARM 设备），解压双击 exe，自动弹出内嵌 Chromium 应用窗口（关窗即退出）。</p>
+        <p class="step">在「设置」填入 API Key 即可（web 版以明文 yml 存于 <code>%APPDATA%\ClipForge\settings.yml</code>，注意保管，勿提交到仓库）。</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>ClipForge · AI 视频编辑助手 · 基于 Apache-2.0 许可开源</div>
+    <div class="beian">PlayChessClub官网及相关内容由PlayChessClub管理委员维护</div>
+    <div class="beian">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">浙ICP备2026045898号-1</a>
+      <a href="https://beian.mps.gov.cn/#/query/webSearch?code=33010502013205" target="_blank" rel="noopener" style="margin-left:18px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:-2px;margin-right:5px" aria-hidden="true"><path d="M12 2L4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z" fill="#d4a017"/></svg>浙公网安备33010502013205号
+      </a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
