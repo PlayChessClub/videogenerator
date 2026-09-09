@@ -17,10 +17,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Linux 原生窗口版:内嵌 webkit2gtk(需 CGO),只能在 Linux runner 上编译。
+  # Linux 版:纯静态(无 CGO)编译,zip 免安装 + deb(CLI+浏览器模式,无 webkit 依赖)。
   # ubuntu-24.04-arm 是免费公开仓库 arm64 runner,原生编译 arm64 无需交叉工具链。
-  linux-window:
-    name: Linux 窗口版 (${{ matrix.arch }})
+  linux-build:
+    name: Linux 版 (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
@@ -39,16 +39,10 @@ jobs:
         with:
           go-version: 1.23.x
 
-      - name: 装 webkit2gtk 开发头文件
+      - name: 编译(静态,CLI+浏览器,无 CGO)
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev pkg-config
-
-      - name: 编译(CGO,内嵌 webkit 窗口)
-        shell: bash
-        run: |
-          python3 web/build-pkgs.py --only linux-${{ matrix.arch }} --cgo --deb
+          python3 web/build-pkgs.py --only linux-${{ matrix.arch }} --deb
           ls -la web/release/
 
       - name: 上传 artifact

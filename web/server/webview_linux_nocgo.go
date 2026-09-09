@@ -1,7 +1,6 @@
-//go:build linux && !cgo
+//go:build linux
 
-// Linux 纯静态构建(无 CGO):不嵌 webkit,回退打开系统浏览器。
-// 供服务器/无桌面环境使用;桌面用户请用 deb 安装(内嵌 webkit 窗口)。
+// Linux 不再内嵌 webkit 窗口(VM 兼容差/维护成本高):统一走 CLI(有 TTY)或浏览器(无 TTY)。
 package main
 
 // launchUI 打开系统默认浏览器访问本地 UI。

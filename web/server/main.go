@@ -505,6 +505,13 @@ func ttsWSProxy(w http.ResponseWriter, r *http.Request) {
 // ============================================================
 
 func main() {
+	for _, a := range os.Args[1:] {
+		if a == "-h" || a == "--help" {
+			printUsage()
+			return
+		}
+	}
+
 	cfg := loadConfig()
 	apiKey = cfg.APIKey
 
@@ -604,32 +611,53 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	// 监听端口(失败立即报错,避免"以为启动了却白等")
+	// 监听端口:失败时若探测到已是本应用在跑 → 挂靠模式(attach);
+	// 否则真报错退出。
+	var attach bool
 	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		// 端口被占:若已是本应用在跑(残留实例),直接唤起 UI 挂靠它,不报错退出
 		if probeClipforge("http://" + listenAddr) {
-			fmt.Fprintln(os.Stderr, "ℹ️ 检测到 ClipForge 已在运行,直接打开它的界面")
-			launchUI("http://" + listenAddr)
-			os.Exit(0) // 关窗即退;后端由先到的实例继续服务
+			attach = true
+		} else {
+			fmt.Fprintln(os.Stderr, "❌ 端口启动失败:", err)
+			os.Exit(1)
 		}
-		fmt.Fprintln(os.Stderr, "❌ 端口启动失败:", err)
-		os.Exit(1)
 	}
 
-	fmt.Printf("🎬 ClipForge 启动 → http://%s\n", listenAddr)
+	baseURL := "http://" + listenAddr
+
+	// 先启动 HTTP server(goroutine):CLI 菜单和 Web UI 都要访问它
+	errCh := make(chan error, 1)
+	if !attach {
+		go func() {
+			errCh <- srv.Serve(ln)
+		}()
+	}
+
+	// CLI 模式(Linux 终端默认):服务已就绪(或挂靠已有实例),直接进命令行菜单
+	if isCLIMode(os.Args[1:]) {
+		runCLI(baseURL, attach)
+		if !attach {
+			_ = srv.Close() // 让 Serve 的 goroutine 正常收尾后退出
+		}
+		os.Exit(0)
+	}
+
+	// ===== Web/窗口模式:起服务后唤起 UI(窗口或浏览器),Ctrl+C 退出 =====
+	if attach {
+		// 已有实例在跑:直接唤起它的界面,本进程即退(后端由先到的实例继续服务)
+		fmt.Fprintln(os.Stderr, "ℹ️ 检测到 ClipForge 已在运行,打开它的界面")
+		launchUI(baseURL)
+		os.Exit(0)
+	}
+
+	fmt.Printf("🎬 ClipForge 启动 → %s\n", baseURL)
 	fmt.Printf("   配置文件: %s\n", configPath())
 	fmt.Printf("   按 Ctrl+C 退出\n")
 
-	// 先启动 HTTP server(goroutine),再唤起 UI,保证页面一打开就能访问到
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- srv.Serve(ln)
-	}()
-
 	// Windows: 内嵌 WebView2 窗口(阻塞直到关窗,关窗即退出)
 	// 其他平台: 打开系统浏览器后返回
-	launchUI("http://" + listenAddr)
+	launchUI(baseURL)
 
 	// Ctrl+C 优雅退出(主要给非 Windows 平台用)
 	sigCh := make(chan os.Signal, 1)
@@ -645,4 +673,28 @@ func main() {
 		fmt.Println("\n收到 Ctrl+C,正在退出…")
 		_ = srv.Close()
 	}
+}
+
+// isCLIMode 决定进 CLI 还是 Web/窗口模式:
+//   - 显式 --cli → CLI;显式 --web → Web
+//   - 默认:Linux 且 stdin 是终端(真在命令行里跑) → CLI
+//     (桌面图标启动没有 TTY → Web 模式,自动开浏览器)
+func isCLIMode(args []string) bool {
+	forceCLI, forceWeb := false, false
+	for _, a := range args {
+		switch a {
+		case "--cli", "-c":
+			forceCLI = true
+		case "--web", "-w":
+			forceWeb = true
+		}
+	}
+	if forceCLI {
+		return true
+	}
+	if forceWeb || runtime.GOOS != "linux" {
+		return false
+	}
+	fi, err := os.Stdin.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }

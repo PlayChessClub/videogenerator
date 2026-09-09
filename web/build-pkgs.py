@@ -2,12 +2,10 @@
 # ClipForge web 版一键构建: 交叉编译 windows/linux + zip + deb
 #
 # 用法(在 web/server 所在仓库内任意位置):
-#   python3 build-pkgs.py                          # 默认: 本地交叉编译 windows amd64/arm64 + linux 静态回退版(纯 zip)
-#   python3 build-pkgs.py --only linux-amd64 --deb # 指定目标并为 linux 打 deb(需要该二进制已是 CGO 窗口版,CI 内使用)
-#   python3 build-pkgs.py --only linux-amd64 --cgo # CGO 构建(Linux 原生机上,产 webkit 窗口版)
+#   python3 build-pkgs.py                          # 默认: 本地交叉编译 windows amd64/arm64
+#   python3 build-pkgs.py --only linux-amd64 --deb # 指定 linux 目标并打 deb(CI 内使用)
 #
-# 说明: linux 窗口版依赖 libwebkit2gtk-4.1-dev + CGO,只能在 Linux 上编译(CI 出包);
-#       CGO_ENABLED=0 的 linux 静态版不含窗口,回退打开浏览器。
+# 说明: 全部纯静态编译(CGO_ENABLED=0)。Linux 版 = CLI(终端) + 浏览器(桌面图标,无 webkit)。
 import os, sys, io, time, tarfile, zipfile, subprocess, argparse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -65,10 +63,11 @@ def make_deb(bin_path, goarch):
                f"Architecture: {goarch}\nInstalled-Size: {os.path.getsize(bin_path) // 1024 + 900}\n"
                f"Maintainer: PlayChessClub <playchessclub@users.noreply.github.com>\n"
                f"Homepage: https://github.com/PlayChessClub/videogenerator\n"
-               f"Depends: libwebkit2gtk-4.1-0, xdg-utils\n"
+               f"Depends: xdg-utils\n"
                f"Description: ClipForge AI - 本地 API 代理客户端(视频/图片/语音生成)\n"
-               f" 单文件 Go 本地服务, 前端已内嵌, 内嵌 webkit 原生窗口(无桌面环境回退浏览器)。\n"
-               f" 作为 DashScope(阿里云百炼) API 代理, API Key 保存在本机, 前端不直接接触 Key。\n")
+               f" 单文件静态 Go 程序, 前端已内嵌。终端运行进命令行菜单(clipforge --help);\n"
+               f" 桌面图标启动自动开浏览器访问 127.0.0.1:8731。\n"
+               f" 作为 DashScope(阿里云百炼) API 代理, API Key 保存在本机, 不回显不上报。\n")
     tmp_desktop = os.path.join("/tmp", f"clipforge-desktop-{goarch}")
     tmp_control = os.path.join("/tmp", f"clipforge-control-{goarch}")
     open(tmp_desktop, "w").write(desktop)
@@ -95,14 +94,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="windows-amd64,windows-arm64",
                     help="逗号分隔 goos-goarch 列表(默认 windows 双架构)")
-    ap.add_argument("--deb", action="store_true", help="为 linux 目标打 deb 窗口版安装包")
-    ap.add_argument("--cgo", action="store_true", help="启用 CGO(Linux 原生机编 webkit 窗口版用)")
+    ap.add_argument("--deb", action="store_true", help="为 linux 目标打 deb 安装包")
+    ap.add_argument("--cgo", action="store_true", help="(兼容参数,已弃用:现在一律静态编译)")
     args = ap.parse_args()
 
     os.makedirs(REL, exist_ok=True)
     for t in args.only.split(","):
         goos, goarch = t.split("-")
-        b = build_bin(goos, goarch, args.cgo and goos == "linux")
+        b = build_bin(goos, goarch, False)  # 一律 CGO_ENABLED=0 静态
         z = make_zip(b, goos, goarch)
         line = f"{goos}/{goarch}: {os.path.getsize(b)} bytes -> {os.path.basename(z)}"
         if args.deb and goos == "linux":
