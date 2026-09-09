@@ -15,8 +15,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -915,10 +917,11 @@ func runCLI(base string, attach bool) {
 	if attach {
 		fmt.Println("ℹ️ ClipForge 服务已在运行,直接连接。退出本程序不影响后台服务。")
 	} else {
-		fmt.Printf("🎬 ClipForge CLI v3.2.1(本地服务 %s)\n", base)
+		fmt.Printf("🎬 ClipForge CLI v3.2.2(本地服务 %s)\n", base)
 		fmt.Printf("   配置文件: %s\n", configPath())
 	}
 	fmt.Println("   --web 可切换回浏览器界面;--cli 强制命令行(本会话默认)")
+	fmt.Printf("   📁 生成的视频/图片/语音将保存到: %s\n", saveDir())
 
 	for {
 		fmt.Println()
@@ -997,12 +1000,38 @@ func fileExists(p string) bool {
 	return err == nil && !fi.IsDir()
 }
 
+// saveDir 返回系统下载目录(CLI 产物默认保存处)。
+// Linux 优先 xdg-user-dir(尊重用户自定义下载位置/本地化目录名,如"下载");
+// 回退 $HOME/Downloads(不存在则自动创建);全失败才退回当前目录。
+func saveDir() string {
+	if runtime.GOOS == "linux" {
+		if out, err := exec.Command("xdg-user-dir", "DOWNLOAD").Output(); err == nil {
+			if d := strings.TrimSpace(string(out)); d != "" {
+				if fi, err := os.Stat(d); err == nil && fi.IsDir() {
+					return d
+				}
+			}
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		d := filepath.Join(home, "Downloads")
+		if fi, err := os.Stat(d); err == nil && fi.IsDir() {
+			return d
+		}
+		if err := os.MkdirAll(d, 0o755); err == nil {
+			return d
+		}
+	}
+	return "."
+}
+
 func saveName(prefix, ext string) string {
+	dir := saveDir()
 	name := fmt.Sprintf("%s-%s%s", prefix, ts(), ext)
-	if _, err := os.Stat(name); err == nil {
+	if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
 		name = fmt.Sprintf("%s-%s-%s%s", prefix, ts(), randomID()[:4], ext)
 	}
-	return name
+	return filepath.Join(dir, name)
 }
 
 func truncate(s string, n int) string {
