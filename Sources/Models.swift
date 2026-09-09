@@ -7,6 +7,8 @@ enum FixedModel {
     static let tts = "cosyvoice-v3.5-plus"
     static let voiceEnrollment = "voice-enrollment"
     static let videoI2V = "wan2.6-i2v"
+    static let imageDefault = "qwen-image-2.0"
+    static let imageModels = ["qwen-image-2.0", "qwen-image-2.0-pro", "wan2.7-image", "wan2.7-image-pro"]
 }
 
 enum DashScope {

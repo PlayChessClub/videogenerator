@@ -27,6 +27,7 @@ struct RootView: View {
     @State private var selection: Tab = .voice
     enum Tab: String, CaseIterable, Identifiable {
         case voice = "声音工作室"
+        case image = "图片生成"
         case video = "视频生成"
         case timeline = "剪辑时间线"
         case settings = "设置"
@@ -34,6 +35,7 @@ struct RootView: View {
         var symbol: String {
             switch self {
             case .voice: return "waveform"
+            case .image: return "photo.on.rectangle"
             case .video: return "film"
             case .timeline: return "scissors"
             case .settings: return "gearshape"
@@ -49,6 +51,7 @@ struct RootView: View {
                 ZStack {
                     switch selection {
                     case .voice: VoiceStudioView().transition(.opacity)
+                    case .image: ImageStudioView().transition(.opacity)
                     case .video: VideoStudioView().transition(.opacity)
                     case .timeline: TimelineView().transition(.opacity)
                     case .settings: SettingsView().transition(.opacity)

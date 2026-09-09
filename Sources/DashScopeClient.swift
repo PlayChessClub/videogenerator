@@ -227,6 +227,70 @@ final class DashScopeClient {
         return VideoStatus(state: state, videoUrl: vurl, message: msg, raw: json)
     }
 
+    // MARK: - 文生图（同步 multimodal-generation）
+    //
+    // 接口：POST /services/aigc/multimodal-generation/generation
+    // 请求体：{model, input:{messages:[{role:"user", content:[{text}]}]}, parameters:{size,n}}
+    // 同步返回 output.choices[].message.content[].image（图片 URL，可能多张）
+    // 注意：size 分隔符是「*」不是「x」，如 "1024*1024"
+
+    struct ImageRequest {
+        var prompt: String
+        var model: String = FixedModel.imageDefault
+        var size: String = "1024*1024"
+        var n: Int = 1
+        var promptExtend: Bool = true
+        var watermark: Bool = false
+    }
+
+    /// 同步生成图片，返回图片 URL 数组（通常 1 张，wan 系列可能多张）
+    func submitImage(_ r: ImageRequest) async throws -> [String] {
+        let params: [String: Any] = [
+            "size": r.size,
+            "n": r.n,
+            "watermark": r.watermark,
+            "prompt_extend": r.promptExtend,
+        ]
+        let body: [String: Any] = [
+            "model": r.model,
+            "input": [
+                "messages": [
+                    ["role": "user", "content": [["text": r.prompt]]]
+                ]
+            ],
+            "parameters": params,
+        ]
+        let json = try await postJSON(
+            "\(DashScope.httpBase)/services/aigc/multimodal-generation/generation",
+            body: body)
+
+        // 解析 output.choices[*].message.content[*].image
+        var urls: [String] = []
+        if let out = json["output"] as? [String: Any],
+           let choices = out["choices"] as? [[String: Any]] {
+            for ch in choices {
+                guard let msg = ch["message"] as? [String: Any],
+                      let content = msg["content"] as? [[String: Any]] else { continue }
+                for item in content {
+                    if let u = item["image"] as? String, !u.isEmpty { urls.append(u) }
+                }
+            }
+        }
+        // 兼容某些模型返回 results 结构
+        if urls.isEmpty {
+            if let out = json["output"] as? [String: Any],
+               let results = out["results"] as? [[String: Any]] {
+                for item in results {
+                    if let u = item["url"] as? String, !u.isEmpty { urls.append(u) }
+                }
+            }
+        }
+        if urls.isEmpty {
+            throw APIError("生成失败：未返回图片地址 \(json["code"] ?? "") \(json["message"] ?? "")")
+        }
+        return urls
+    }
+
     // MARK: - 下载远端资源到本地
 
     func download(_ remote: URL, to dest: URL) async throws {

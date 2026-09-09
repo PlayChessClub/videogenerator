@@ -99,6 +99,28 @@ enum TokenEstimator {
                      detail: "费用随样本训练与首次合成出账，金额波动较大")
     }
 
+    // MARK: - 文生图
+
+    /// 生图模型单价（元/张，华北2北京按量付费）
+    private static func imageRate(forModel model: String) -> Double {
+        switch model {
+        case "qwen-image-2.0-pro", "wan2.7-image-pro": return 0.5
+        default: return 0.2   // qwen-image-2.0 / wan2.7-image
+        }
+    }
+
+    /// 估算一次文生图：按「张」计费
+    static func estimateImage(model: String, size: String, n: Int) -> Estimate {
+        let rate = imageRate(forModel: model)
+        let amount = rate * Double(n)
+        // 生图 token 当量：与视频视觉当量同量级参考（1 张 ≈ 1 秒 720P 的视觉当量）
+        let tokenPerImage = 120_000
+        let tokenEst = tokenPerImage * n
+        return makeEstimate(model: model, action: "文生图",
+                            tokenEst: tokenEst, amount: amount,
+                            detail: "\(model) · \(size) · \(n) 张 · ¥\(rateTrunc(rate))/张")
+    }
+
     // MARK: - 内部
 
     private static func rateTrunc(_ v: Double) -> String {

@@ -12,10 +12,35 @@
 ## 功能
 
 - **声音工作室**：CosyVoice 声音克隆（voice enrollment）+ 文本转语音。支持公网音频 URL 或本地音频上传，音色状态自动轮询，合成参数可调（音量 / 语速 / 音高）。
+- **图片生成**：文生图（同步接口，无需轮询）。模型可选 `qwen-image-2.0`（默认）/ `qwen-image-2.0-pro` / `wan2.7-image` / `wan2.7-image-pro`，尺寸与张数可控，结果自动下载并收录素材库。
 - **视频生成**：图生视频（首帧 + 可选配音），异步任务提交 + 自动轮询 + 结果下载。分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关可控。
 - **剪辑时间线**：把生成的视频按顺序拼接导出，支持「保留原声」或「整体替换配音」两种模式，纯 AVFoundation 实现，无外部依赖。
 - **消费预估值**：在发起语音合成 / 声音克隆 / 图生视频前，会弹窗提示**预计消耗的 token 区间（±30%）** 与**预估金额**，确认后才真正调用模型，避免无意产生费用。
 - **设置**：DashScope API Key 存于 macOS 钥匙串（`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`，仅本机、解锁后可用），可随时更换。
+
+## 关于阿里云 Token Plan（重要）
+
+ClipForge 的图生图功能使用**普通百炼按量付费 API Key**（`sk-` 开头，端点 `dashscope.aliyuncs.com`），
+**不使用** Token Plan 专属 Key（`sk-sp-` 开头）。
+
+原因：阿里云官方规定 Token Plan 专属 Key 仅限在 Claude Code / Cursor / Qwen Code 等
+AI 编程与智能体工具中**交互式**使用，禁止用于自定义应用程序后端或自动化脚本；
+且图像/视频生成模型无法通过文本类 Base URL 直接调用，只能通过工具的 Skill /
+Slash Command / Agent 扩展机制接入。
+
+因此：
+- ✅ ClipForge 内生成图片 → 消耗**普通百炼账户余额**（按量付费）
+- ✅ 在 Claude Code / Cursor 里用 Token Plan 生图 → 消耗**套餐 Credits**（走 Skill 机制）
+- ❌ 不要把 `sk-sp-` 开头的 Key 填进 ClipForge，否则可能违反订阅条款导致封禁
+
+生图计费参考（华北2北京，按成功图片张数）：
+
+| 模型 | 单价 |
+|---|---|
+| `qwen-image-2.0` | ¥0.20 / 张 |
+| `wan2.7-image` | ¥0.20 / 张 |
+| `qwen-image-2.0-pro` | ¥0.50 / 张 |
+| `wan2.7-image-pro` | ¥0.50 / 张 |
 
 ## 固定模型
 
@@ -39,7 +64,7 @@
 
 ## 安装与首次运行
 
-1. 双击 `ClipForge-1.2.0.dmg`，把 ClipForge 拖入「应用程序」。
+1. 双击 `ClipForge-1.3.0.dmg`，把 ClipForge 拖入「应用程序」。
 2. 首次打开若被 Gatekeeper 拦截（ad-hoc 签名，未经苹果公证），右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。
 3. 进入「设置」填入你的 DashScope API Key（阿里云百炼控制台创建，`sk-` 开头），保存后即可使用。
 
@@ -94,10 +119,11 @@ ClipForge/
 │   ├── CosyVoiceTTS.swift
 │   ├── ExportEngine.swift
 │   ├── VoiceStudioView.swift
+│   ├── ImageStudioView.swift    # 文生图（prompt/模型/尺寸/张数 + 额度确认）
 │   ├── VideoStudioView.swift
 │   ├── TimelineView.swift
 │   ├── SettingsView.swift
-│   ├── TokenEstimator.swift       # 费用/token 预估（语音按字符、视频按秒、克隆按出账）
+│   ├── TokenEstimator.swift       # 费用/token 预估（语音按字符、视频按秒、生图按张、克隆按出账）
 │   └── TokenConfirmOverlay.swift  # 生成前 token 消耗确认浮层（含 ±30% 区间）
 ├── Tools/
 │   ├── MakeIcon.swift            # 应用图标生成器
