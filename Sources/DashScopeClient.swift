@@ -20,6 +20,17 @@ enum JSONValue {
     static func dict(_ obj: Any?, _ key: String) -> [String: Any]? {
         (obj as? [String: Any])?[key] as? [String: Any]
     }
+    static func int(_ obj: Any?, _ keyPath: [String]) -> Int? {
+        var cur = obj
+        for k in keyPath {
+            guard let d = cur as? [String: Any], let v = d[k] else { return nil }
+            cur = v
+        }
+        if let n = cur as? Int { return n }
+        if let n = cur as? NSNumber { return n.intValue }
+        if let s = cur as? String { return Int(s) }
+        return nil
+    }
 }
 
 @MainActor
@@ -306,6 +317,49 @@ final class DashScopeClient {
     // MARK: - 通用 POST JSON
 
     @discardableResult
+    /// 文本向量化（qwen3.7-text-embedding-flash，单次最多 20 条文本）
+    /// 返回：与输入顺序一致的向量数组 + 本次实际计费 token 数（接口未返回则按文本长度估算）
+    func embed(texts: [String]) async throws -> (vectors: [[Double]], tokens: Int) {
+        guard !texts.isEmpty else { return ([], 0) }
+        let body: [String: Any] = [
+            "model": FixedModel.embedding,
+            "input": ["texts": texts],
+            "parameters": ["dimension": 1024],
+        ]
+        let json = try await postJSON(
+            "\(DashScope.httpBase)/services/embeddings/text-embedding/text-embedding",
+            body: body)
+        let out = JSONValue.dict(json, "output") ?? json
+        guard let list = out["embeddings"] as? [[String: Any]] else {
+            throw APIError("向量接口响应异常：缺少 output.embeddings")
+        }
+        // 保证与输入顺序一致（部分模型不保证返回顺序）
+        let sorted = list.sorted { a, b in
+            (JSONValue.int(a, ["text_index"]) ?? 0) < (JSONValue.int(b, ["text_index"]) ?? 0)
+        }
+        let vectors = sorted.map { d -> [Double] in
+            if let v = d["embedding"] as? [Double] { return v }
+            if let v = d["embedding"] as? [NSNumber] { return v.map { $0.doubleValue } }
+            return []
+        }
+        let tokens = JSONValue.int(json, ["usage", "total_tokens"]) ?? estimateTokens(texts)
+        return (vectors, tokens)
+    }
+
+    /// 粗略估算 token 数（中文按字、其他按 4 字符 ≈ 1 token）
+    private func estimateTokens(_ texts: [String]) -> Int {
+        var n = 0
+        for t in texts {
+            for ch in t {
+                if let v = ch.unicodeScalars.first, v.value > 0x2E80 { n += 1 }   // CJK 及中文标点
+                else { n += 0 }
+            }
+            let ascii = t.unicodeScalars.filter { $0.value <= 0x2E80 }.count
+            n += ascii / 4
+        }
+        return max(1, n)
+    }
+
     func postJSON(_ urlString: String, body: [String: Any], extra: [String: String] = [:]) async throws -> [String: Any] {
         guard let url = URL(string: urlString) else { throw APIError("URL 无效") }
         var req = URLRequest(url: url)

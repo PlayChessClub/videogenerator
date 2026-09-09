@@ -12,6 +12,8 @@ enum Pal {
     static let green  = Color(red: 0.20, green: 0.70, blue: 0.35)
     static let red    = Color(red: 0.85, green: 0.25, blue: 0.25)
     static let blue   = Color(red: 0.15, green: 0.45, blue: 0.85)
+    /// 金色（「试试手气 Pro」按钮底色）
+    static let gold   = Color(red: 0.98, green: 0.78, blue: 0.25)
     static let muted  = Color.primary.opacity(0.55)
     static let faint  = Color.primary.opacity(0.34)
 }
@@ -166,6 +168,36 @@ extension View {
     }
     /// 文字链接按钮（全版本 .link 可用）
     func linkStyle() -> some View { self.buttonStyle(.link) }
+
+    /// 金色按钮（「试试手气 Pro」）：macOS 26 用金色 tint 的液态玻璃，低版本用金色渐变胶囊
+    func goldButton() -> some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                buttonStyle(.glassProminent).tint(Pal.gold)
+            } else {
+                buttonStyle(GoldCapsuleButtonStyle())
+            }
+        }
+    }
+}
+
+/// 低版本的金色胶囊按钮（与 CapsuleButtonStyle 同尺寸，底色为金色渐变）
+private struct GoldCapsuleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(Color(red: 0.38, green: 0.24, blue: 0.02))
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 1.0, green: 0.87, blue: 0.45),
+                             Color(red: 0.94, green: 0.71, blue: 0.16)],
+                    startPoint: .top, endPoint: .bottom)
+            )
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.6))
+            .clipShape(Capsule())
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
 }
 
 // MARK: - 常用文本/视图辅助（抹平 foregroundStyle / textSelection / 版本差异）

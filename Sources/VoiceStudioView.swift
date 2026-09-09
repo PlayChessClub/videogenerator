@@ -257,6 +257,11 @@ struct VoiceStudioView: View {
                             Button("刷新列表") { Task { await m.refreshVoices() } }.buttonStyle(.link)
                             Spacer()
                         }
+                        HStack {
+                            Text("合成文本").font(.caption).foregroundColor(Pal.muted)
+                            Spacer()
+                            LuckyPromptButtons(kind: .audio, confirm: m.confirm, text: $m.text)
+                        }
                         TextEditor(text: $m.text).frame(height: 90).hideScrollBackground()
                             .padding(8).glassField
                         VStack(alignment: .leading, spacing: 6) {

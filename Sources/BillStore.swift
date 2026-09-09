@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 // MARK: - 生成账单
 //
@@ -40,13 +41,40 @@ final class BillStore: ObservableObject {
         return base.appendingPathComponent("bill.jsonl")
     }()
 
-    private init() { load() }
+    /// 待落盘缓冲：累计 5 条写一次；退出/关窗前强制 flush
+    private var pending: [BillEntry] = []
+    private let flushThreshold = 5
+
+    private init() {
+        load()
+        // 关窗/退出前把缓冲中的条目落盘，避免最后不足 5 条的记录丢失
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.flush() }
+        }
+    }
 
     // MARK: - 读写
 
+    /// 新增一条：先进内存 + 缓冲，累计 flushThreshold 条才真正落盘（减少频繁写盘）
     func add(_ e: BillEntry) {
         entries.insert(e, at: 0)
-        appendToDisk(e)
+        pending.append(e)
+        if pending.count >= flushThreshold { flush() }
+    }
+
+    /// 把缓冲中的条目一次性追加写入磁盘；不足一批时由退出钩子兜底
+    func flush() {
+        guard !pending.isEmpty else { return }
+        var text = ""
+        for e in pending {
+            guard let data = try? JSONEncoder().encode(e),
+                  let line = String(data: data, encoding: .utf8) else { continue }
+            text += line + "\n"
+        }
+        appendRaw(text)
+        pending.removeAll()
     }
 
     /// 回填任务 ID / 状态（异步任务拿到 task_id 后调用）
@@ -55,6 +83,7 @@ final class BillStore: ObservableObject {
         if let t = taskId { entries[idx].taskId = t }
         if let s = status { entries[idx].status = s }
         rewriteDisk()
+        pending.removeAll()   // 全量重写已包含缓冲条目
     }
 
     /// 全量重写磁盘（条目不多，简单可靠）
@@ -68,10 +97,9 @@ final class BillStore: ObservableObject {
         try? text.write(to: fileURL, atomically: true, encoding: .utf8)
     }
 
-    private func appendToDisk(_ e: BillEntry) {
-        guard let data = try? JSONEncoder().encode(e),
-              let line = String(data: data, encoding: .utf8) else { return }
-        let row = line + "\n"
+    private func appendRaw(_ text: String) {
+        guard !text.isEmpty else { return }
+        let row = text.hasSuffix("\n") ? text : text + "\n"
         if let handle = try? FileHandle(forWritingTo: fileURL) {
             handle.seekToEndOfFile()
             handle.write(Data(row.utf8))
@@ -95,6 +123,7 @@ final class BillStore: ObservableObject {
 
     func clear() {
         entries = []
+        pending.removeAll()
         try? "".write(to: fileURL, atomically: true, encoding: .utf8)
     }
 

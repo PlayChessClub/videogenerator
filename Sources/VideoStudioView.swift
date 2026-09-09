@@ -180,11 +180,7 @@ struct VideoStudioView: View {
                             HStack {
                                 Text("Prompt").font(.caption).foregroundColor(Pal.muted)
                                 Spacer()
-                                Button {
-                                    m.prompt = PromptBank.randomVideo()
-                                } label: {
-                                    Label("试试手气", systemImage: "dice")
-                                }.glassButton()
+                                LuckyPromptButtons(kind: .video, confirm: m.confirm, text: $m.prompt)
                             }
                             TextEditor(text: $m.prompt).frame(height: 84).hideScrollBackground()
                                 .padding(8).glassField

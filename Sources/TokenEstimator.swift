@@ -62,6 +62,10 @@ enum TokenEstimator {
             priceValue: 0.6, priceUnit: "元/秒(720P)",
             tokenPerUnit: 120_000,  // 1 秒 720P 视频的视觉 token 量级参考（非官方，仅供量级直觉）
             billedBy: .videoSeconds(0, "720P")),
+        FixedModel.embedding: Rate(
+            priceValue: 0.000125, priceUnit: "元/千token",
+            tokenPerUnit: 1_000,   // 官方按输入 token 计费，1 单位 = 1000 token
+            billedBy: .chars(0)),
     ]
 
     /// 视频模型单价表（元/秒，华北2北京按量付费）
@@ -133,6 +137,27 @@ enum TokenEstimator {
         return makeEstimate(model: model, action: "文生图",
                             tokenEst: tokenEst, amount: amount,
                             detail: "\(model) · \(size) · \(n) 张 · ¥\(rateTrunc(rate))/张")
+    }
+
+    /// 粗略估算 embedding 输入的 token 数（CJK 按字计、其他按 4 字符 ≈ 1 token）
+    static func embeddingTokens(for texts: [String]) -> Int {
+        var n = 0
+        for t in texts {
+            let scalars = Array(t.unicodeScalars)
+            let cjk = scalars.filter { $0.value > 0x2E80 }.count
+            n += cjk + (scalars.count - cjk) / 4
+        }
+        return max(1, n)
+    }
+
+    /// 估算一次「试试手气 Pro」的向量调用（按输入 token 计费，¥0.000125/千token）
+    static func estimateEmbedding(tokens: Int, texts: Int = 0) -> Estimate {
+        let rate = costTable[FixedModel.embedding]?.priceValue ?? 0.000125
+        let amount = Double(tokens) / 1000.0 * rate
+        var detail = "输入 ≈\(tokens) token · ¥0.000125/千token"
+        if texts > 0 { detail = "\(texts) 条文本 · " + detail }
+        return makeEstimate(model: FixedModel.embedding, action: "试试手气 Pro",
+                            tokenEst: tokens, amount: amount, detail: detail)
     }
 
     // MARK: - 内部

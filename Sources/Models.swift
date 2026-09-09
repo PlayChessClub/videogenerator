@@ -10,6 +10,9 @@ enum FixedModel {
     static let imageDefault = "qwen-image-2.0"
     static let imageModels = ["qwen-image-2.0", "qwen-image-2.0-pro", "wan2.7-image", "wan2.7-image-pro"]
 
+    /// 文本向量化模型（「试试手气 Pro」用 embedding 做语义匹配，按输入 token 计费）
+    static let embedding = "qwen3.7-text-embedding-flash"
+
     /// 视频生成模型（文生视频 t2v 无需首帧图；图生视频 i2v 需要）
     static let videoModels = ["wan2.6-i2v", "wan2.7-i2v", "wan2.6-i2v-flash", "wan2.7-t2v", "wan2.6-t2v"]
 

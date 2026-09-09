@@ -34,6 +34,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    /// 退出前把账单缓冲（不足 5 条的部分）落盘，保证记录不会随软件关闭丢失
+    func applicationWillTerminate(_ notification: Notification) {
+        Task { @MainActor in BillStore.shared.flush() }
+    }
 }
 
 // MARK: - 中文顶栏（自定义 NSMainMenu）

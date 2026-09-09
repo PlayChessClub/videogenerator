@@ -40,4 +40,10 @@ enum PriceList {
         PriceRow(model: "voice-enrollment",     name: "声音克隆", unit: "按出账",
                  price: "随训练/合成出账"),
     ]
+
+    // 向量（「试试手气 Pro」语义匹配，按输入 token 计费）
+    static let vector: [PriceRow] = [
+        PriceRow(model: "qwen3.7-text-embedding-flash", name: "文本向量", unit: "元/千token",
+                 price: "¥0.000125"),
+    ]
 }

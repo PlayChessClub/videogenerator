@@ -96,11 +96,7 @@ struct ImageStudioView: View {
                             HStack {
                                 Text("图片描述").font(.caption).foregroundColor(Pal.muted)
                                 Spacer()
-                                Button {
-                                    m.prompt = PromptBank.randomImage()
-                                } label: {
-                                    Label("试试手气", systemImage: "dice")
-                                }.glassButton()
+                                LuckyPromptButtons(kind: .image, confirm: m.confirm, text: $m.prompt)
                             }
                             TextEditor(text: $m.prompt).frame(height: 90).hideScrollBackground()
                                 .padding(8).glassField
