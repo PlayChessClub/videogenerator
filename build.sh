@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="1.7.2"
+VERSION="1.7.3"
 MIN_OS="11.0"
 BUILD_DIR="build"
 SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
@@ -19,7 +19,7 @@ APP="$BUILD_DIR/$APP_NAME.app"
 SIGN_APP="${SIGN_APP:-}"
 SIGN_PKG="${SIGN_PKG:-}"
 
-echo "==> [1/5] 编译 $APP_NAME（通用二进制 arm64 + x86_64，最低 macOS $MIN_OS）"
+echo "==> [1/6] 编译 $APP_NAME（通用二进制 arm64 + x86_64，最低 macOS $MIN_OS）"
 rm -rf "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 rm -f "$BUILD_DIR/bin_arm64" "$BUILD_DIR/bin_x86_64"
@@ -40,7 +40,7 @@ fi
 chmod +x "$APP/Contents/MacOS/$APP_NAME"
 file "$APP/Contents/MacOS/$APP_NAME"
 
-echo "==> [2/5] 生成 Info.plist"
+echo "==> [2/6] 生成 Info.plist"
 BUILD_NUMBER=$(($(date +%s) % 100000))
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -76,7 +76,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-echo "==> [3/5] 生成应用图标"
+echo "==> [3/6] 生成应用图标"
 ICON_TMP="$BUILD_DIR/icon_1024.png"
 # 用 Swift 小工具绘制图标（避免依赖 PyObjC）
 if [ ! -x "$BUILD_DIR/makeicon" ]; then
@@ -95,7 +95,17 @@ if [ -f "$ICON_TMP" ]; then
     || cp "$ICON_TMP" "$APP/Contents/Resources/AppIcon.icns"
 fi
 
-echo "==> [4/5] 装入许可证 + 代码签名"
+echo "==> [4/6] 装入音色素材 VoiceSamples（含 SOURCES.md，随包只读）"
+# 仓库 VoiceSamples/ 整目录拷入 Contents/Resources/VoiceSamples/（缺目录 = 无内置样音，跳过）
+if [ -d VoiceSamples ]; then
+  rm -rf "$APP/Contents/Resources/VoiceSamples"
+  cp -R VoiceSamples "$APP/Contents/Resources/VoiceSamples"
+  echo "  · 已装入 $(ls VoiceSamples | wc -l | tr -d ' ') 个文件"
+else
+  echo "  · 未找到 VoiceSamples/，跳过（应用内素材夹留空，可放用户自备音频）"
+fi
+
+echo "==> [5/6] 装入许可证 + 代码签名"
 # Apache-2.0 LICENSE 随 app 装入（用户可在 Finder 右键 App → 显示包内容 → Contents/Resources/LICENSE 查看）
 cp LICENSE "$APP/Contents/Resources/LICENSE"
 if [ -n "$SIGN_APP" ]; then
@@ -107,7 +117,7 @@ else
 fi
 codesign --verify --verbose=1 "$APP" 2>&1 | tail -1
 
-echo "==> [5/5] 打包 .pkg（component + distribution，安装向导含 Apache-2.0 许可协议页）"
+echo "==> [6/6] 打包 .pkg（component + distribution，安装向导含 Apache-2.0 许可协议页）"
 PKG="$BUILD_DIR/ClipForge-${VERSION}.pkg"
 COMPONENT="$BUILD_DIR/ClipForge-${VERSION}-component.pkg"
 DIST_DIR="$BUILD_DIR/.dist"

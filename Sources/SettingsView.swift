@@ -54,8 +54,28 @@ struct SettingsView: View {
                     }
                 }
 
-                GlassCard("下载位置", subtitle: "生成的视频 / 图片 / 语音分目录保存") {
+                GlassCard("下载位置", subtitle: "整体设置一次，视频 / 图片 / 语音自动在同一根下分目录") {
                     VStack(alignment: .leading, spacing: 12) {
+                        // 顶部：唯一入口，一次更改整个根目录
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "externaldrive.fill")
+                                .foregroundColor(Pal.purple).frame(width: 20)
+                            Text("保存根目录").font(.caption).foregroundColor(Pal.muted)
+                                .frame(width: 76, alignment: .leading)
+                            Text(dl.saveRootDisplay())
+                                .monospacedFont(11).lineLimit(1).truncationMode(.middle).selectableText()
+                            Spacer()
+                            Button { dl.chooseViaPanel() } label: {
+                                Label("更改…", systemImage: "folder")
+                            }.glassButton(prominent: true)
+                            if dl.isCustom {
+                                Button { dl.resetToDefault() } label: {
+                                    Label("恢复默认", systemImage: "arrow.uturn.left")
+                                }.glassButton()
+                            }
+                        }
+                        Divider().opacity(0.3)
+                        // 派生预览：只读展示，跟随同一根目录，不可单类修改
                         ForEach(MediaKind.allCases) { k in
                             HStack(alignment: .firstTextBaseline, spacing: 8) {
                                 Image(systemName: k.symbol).foregroundColor(k.tint).frame(width: 20)
@@ -69,20 +89,37 @@ struct SettingsView: View {
                                 }.glassButton().fixedSize().help("在访达中显示")
                             }
                         }
-                        HStack(spacing: 10) {
-                            Button { dl.chooseViaPanel() } label: {
+                        Text(dl.isCustom
+                             ? "视频 / 图片 / 语音始终一起保存在所选根目录下的 ClipForge / 视频、图片、语音 子目录，不能按类型分开设置；更改或恢复默认时三类会同时切换。"
+                             : "默认使用系统标准目录：~/Movies、~/Pictures、~/Music 下的 ClipForge 文件夹；不能单独更改某一类。")
+                            .font(.caption).foregroundColor(Pal.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                GlassCard("音色素材文件夹", subtitle: "内置样音副本与自备参考音频的存放处") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "waveform.path")
+                                .foregroundColor(Pal.orange).frame(width: 20)
+                            Text("素材目录").font(.caption).foregroundColor(Pal.muted)
+                                .frame(width: 76, alignment: .leading)
+                            Text(VoiceKit.materialRootDisplay())
+                                .monospacedFont(11).lineLimit(1).truncationMode(.middle).selectableText()
+                            Spacer()
+                            Button { VoiceKit.chooseMaterialRootViaPanel() } label: {
                                 Label("更改…", systemImage: "folder")
                             }.glassButton(prominent: true)
-                            if dl.isCustom {
-                                Button { dl.resetToDefault() } label: {
+                            if !VoiceKit.isMaterialRootDefault {
+                                Button { VoiceKit.resetMaterialRoot() } label: {
                                     Label("恢复默认", systemImage: "arrow.uturn.left")
                                 }.glassButton()
                             }
-                            Spacer()
+                            Button { VoiceKit.revealMaterialRoot() } label: {
+                                Image(systemName: "arrow.right.circle")
+                            }.glassButton().fixedSize().help("在访达中显示")
                         }
-                        Text(dl.isCustom
-                             ? "产物保存到所选文件夹下的 ClipForge / 视频、图片、语音。"
-                             : "默认使用系统标准目录：~/Movies、~/Pictures、~/Music 下的 ClipForge 文件夹。")
+                        Text("音色素材保存目录只影响「将来保存 / 导出」的位置，已有文件不会被搬移；默认：~/Library/Application Support/ClipForge/VoiceSamples。")
                             .font(.caption).foregroundColor(Pal.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }

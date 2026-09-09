@@ -94,9 +94,13 @@ final class DownloadLocation: ObservableObject {
         abbrev(dir(for: kind).path)
     }
 
-    func displayRoot() -> String {
-        if let root = customRoot { return abbrev(root.path) }
-        return "系统目录（影片 / 图片 / 音乐）"
+    /// 三类产物的“公共保存根”展示：自定义时 = <根>/ClipForge（三类在其下分目录），
+    /// 默认时 = 系统标准目录。下载位置是「整体一次更改」，不存在按类型的独立根。
+    func saveRootDisplay() -> String {
+        if let root = customRoot {
+            return abbrev(root.appendingPathComponent("ClipForge", isDirectory: true).path)
+        }
+        return "系统标准目录（~/Movies · ~/Pictures · ~/Music）"
     }
 
     private func abbrev(_ path: String) -> String {

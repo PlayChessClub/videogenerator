@@ -20,6 +20,7 @@ AI 视频/图片/语音创作工具，后端固定对接**阿里云 DashScope** 
 ## 功能
 
 - **声音工作室**：CosyVoice 声音克隆（voice enrollment）+ 文本转语音。支持公网音频 URL 或本地音频上传，音色状态自动轮询，合成参数可调（音量 / 语速 / 音高）。
+- **音色素材**（macOS v1.7.3+）：应用内置若干公开许可的风格参考音频（中文/英文、男女声），可**试听**后一键作克隆参考；也可点「保存副本」把样音按自定义昵称复制到「音色素材文件夹」（默认 `~/Library/Application Support/ClipForge/VoiceSamples`，设置页可整体更改）。手动放进该文件夹的 wav/mp3/m4a 会作为自备素材列出，同样可试听/克隆/重命名——素材文件原样保留、可跨项目复用。
 - **图片生成**：文生图（同步接口，无需轮询）。模型可选 `qwen-image-2.0`（默认）/ `qwen-image-2.0-pro` / `wan2.7-image` / `wan2.7-image-pro`，尺寸与张数可控，结果自动下载。
 - **视频生成**：支持文生视频（`wan2.6-t2v` / `wan2.7-t2v`，无需首帧图）与图生视频（`wan2.6-i2v` / `wan2.7-i2v` / `wan2.6-i2v-flash`，需首帧图），模型可切换，异步任务提交 + 自动轮询 + 结果下载。分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关可控（flash 模型无声更省）。
 - **剪辑时间线**（macOS 版）：把生成的视频按顺序拼接导出，支持「保留原声」或「整体替换配音」，纯 AVFoundation 实现。
@@ -72,7 +73,7 @@ ClipForge 的生成功能使用**普通百炼按量付费 API Key**（`sk-` 开�
 
 装好后进入「设置」填入 DashScope API Key（百炼控制台创建，`sk-` 开头；**macOS 版存于钥匙串**），即可使用。
 
-**产物保存位置**（设置页「下载位置」可自定义）：默认按类型分别落到系统标准目录——视频 `~/Movies/ClipForge`、图片 `~/Pictures/ClipForge`、语音 `~/Music/ClipForge`；点「更改…」选一个根文件夹后，产物改为存到 `<该文件夹>/ClipForge/视频、图片、语音`，可随时「恢复默认」。设置页每行右侧的按钮可在访达中打开对应目录。
+**产物保存位置**（设置页「下载位置」可整体更改一次，视频 / 图片 / 语音自动在同一根下分目录，不能按类型分开改）：默认分别落到系统标准目录——视频 `~/Movies/ClipForge`、图片 `~/Pictures/ClipForge`、语音 `~/Music/ClipForge`；点「更改…」选一个根文件夹后，三类产物改为存到 `<该文件夹>/ClipForge/视频、图片、语音`，可随时「恢复默认」。设置页每行右侧的按钮可在访达中打开对应目录。
 
 ### Windows
 
@@ -142,9 +143,10 @@ ClipForge/
 │   ├── VoiceStudioView.swift / ImageStudioView.swift / VideoStudioView.swift / TimelineView.swift / SettingsView.swift
 │   ├── TokenEstimator.swift      # 费用/token 预估
 │   ├── TokenConfirmOverlay.swift # 生成前消耗确认浮层（±30% 区间）
-│   ├── PriceList.swift / PromptBank.swift
+│   ├── PriceList.swift / PromptBank.swift / VoiceKit.swift
 ├── Tools/                        # MakeIcon.swift（图标生成）等辅助工具
 ├── build.sh                      # macOS 一键构建 .pkg
+├── VoiceSamples/                 # 内置音色素材（随 pkg 装入 Resources/VoiceSamples/，含 SOURCES.md 来源登记）
 ├── web/                          # Web 版（Go + HTML5）
 │   ├── build-pkgs.py             # 一键构建脚本（本地 Windows 交叉编译）
 │   ├── assets/icon-512.png       # deb 图标（入库,CI 可用）

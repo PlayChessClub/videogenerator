@@ -42,6 +42,26 @@ final class VoiceStudioModel: ObservableObject {
         }
     }
 
+    // MARK: - 音色素材（内置样例 + 素材文件夹）
+
+    @Published var samples: [ResolvedSample] = []
+
+    /// 重新扫描内置样例与素材文件夹（同步、轻量）
+    func loadSamples() {
+        samples = VoiceKit.loadSamples()
+    }
+
+    /// 用音色素材（本地文件）发起克隆：与「用本地音频」同一条 上传→OSS→createVoice 链路
+    func cloneFromSample(_ rs: ResolvedSample) {
+        guard FileManager.default.fileExists(atPath: rs.fileURL.path) else {
+            error = "素材文件不存在：\(rs.fileURL.path)"
+            return
+        }
+        confirm.confirmAndRun(TokenEstimator.estimateVoiceClone()) { [weak self] in
+            await self?.performCloneFromLocal(rs.fileURL)
+        }
+    }
+
     // 步骤一：从 URL 创建克隆音色（先确认再执行）
     func createVoice() {
         let url = cloningURL.trimmingCharacters(in: .whitespaces)
@@ -222,6 +242,25 @@ struct VoiceStudioView: View {
                     }
                 }
 
+                GlassCard("音色素材", subtitle: "内置风格参考音（随包自带）· 试听满意后一键克隆；也可把自备 wav/mp3/m4a 放进素材夹") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if m.samples.isEmpty {
+                            Text("暂无素材。打开下方「素材夹」放入 wav / mp3 / m4a，即可作为克隆参考；或稍后重试刷新。")
+                                .font(.caption).foregroundColor(Pal.faint)
+                        } else {
+                            ForEach(m.samples) { rs in
+                                VoiceSampleRow(resolved: rs, model: m)
+                            }
+                        }
+                        HStack(spacing: 14) {
+                            Button("刷新素材列表") { m.loadSamples() }.buttonStyle(.link)
+                            Button("打开素材夹…") { VoiceKit.revealMaterialRoot() }.buttonStyle(.link)
+                            Spacer()
+                            if m.busy { ProgressView().controlSize(.small) }
+                        }
+                    }
+                }
+
                 GlassCard("音色状态") {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack { StatusDot(tone: m.busy ? .warn : (m.error == nil ? .ok : .error)); Text(m.status) }
@@ -288,6 +327,7 @@ struct VoiceStudioView: View {
             }
             }
             .hideScrollBackground()
+            .onAppear { m.loadSamples() }
 
             TokenConfirmOverlay(model: m.confirm, title: "语音/克隆")
         }
@@ -307,5 +347,123 @@ struct LabeledSlider: View {
             Slider(value: $value, in: range)
             Text(String(format: "%.1f", value)).monospacedFont(11).frame(width: 34)
         }
+    }
+}
+
+// MARK: - 音色素材行：试听 / 保存副本 / 克隆 / 重命名
+
+struct VoiceSampleRow: View {
+    let resolved: ResolvedSample
+    @ObservedObject var model: VoiceStudioModel
+    @State private var renameOpen = false
+    @State private var editName = ""
+
+    private var sample: VoiceSample { resolved.sample }
+    private var displayName: String { VoiceKit.nickname(for: sample) }
+    private var isPlaying: Bool {
+        Player.shared.playingName == resolved.fileURL.lastPathComponent
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: sample.isBuiltin ? "sparkles" : "folder")
+                .foregroundColor(sample.isBuiltin ? Pal.gold : Pal.muted)
+                .frame(width: 18)
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(displayName).font(.system(size: 13, weight: .medium))
+                    ForEach(sample.tags, id: \.self) { t in
+                        Text(t)
+                            .font(.system(size: 9))
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(Capsule().fill(Color.primary.opacity(0.08)))
+                    }
+                }
+                Text(sample.source)
+                    .font(.caption2).foregroundColor(Pal.faint)
+                    .lineLimit(1).truncationMode(.tail)
+                    .help(sample.source)
+            }
+
+            Spacer()
+
+            // 试听 / 停止
+            Button {
+                if isPlaying { Player.shared.stop() }
+                else { Player.shared.play(name: resolved.fileURL.lastPathComponent, url: resolved.fileURL) }
+            } label: {
+                Image(systemName: isPlaying ? "stop.circle.fill" : "play.circle")
+                    .foregroundColor(isPlaying ? Pal.red : Pal.green)
+            }
+            .glassButton().fixedSize()
+            .help("试听 / 停止")
+
+            // 保存副本（内置未落盘时）/ 已在素材夹
+            if !resolved.materialized && sample.isBuiltin {
+                Button {
+                    VoiceKit.materialize(resolved)
+                    model.loadSamples()
+                } label: {
+                    Image(systemName: "arrow.down.circle")
+                }
+                .glassButton().fixedSize()
+                .help("保存副本到素材文件夹（文件名用当前昵称）")
+            } else {
+                Button { VoiceKit.revealMaterialRoot() } label: {
+                    Image(systemName: "folder")
+                }
+                .glassButton().fixedSize()
+                .help("在访达中打开素材文件夹")
+            }
+
+            // 用作克隆参考
+            Button {
+                model.cloneFromSample(resolved)
+            } label: {
+                Label("用作克隆参考", systemImage: "wand.and.stars")
+            }
+            .glassButton()
+            .disabled(model.busy)
+
+            // 重命名
+            Button {
+                editName = displayName
+                renameOpen = true
+            } label: {
+                Image(systemName: "pencil")
+            }
+            .glassButton().fixedSize()
+            .help(sample.isBuiltin ? "重命名（同时影响素材夹副本的文件名）" : "重命名该素材文件")
+            .popover(isPresented: $renameOpen, arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("重命名「\(displayName)」").font(.headline)
+                    TextField("名称", text: $editName)
+                        .textFieldStyle(.plain).padding(8).glassField
+                    HStack {
+                        Spacer()
+                        Button("取消") { renameOpen = false }.buttonStyle(.link)
+                        Button("保存") { commitRename() }
+                            .glassButton(prominent: true)
+                            .keyboardShortcut(.defaultAction)
+                    }
+                }
+                .padding(14)
+                .frame(width: 260)
+            }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .glassRowStyle
+    }
+
+    private func commitRename() {
+        renameOpen = false
+        let name = VoiceKit.sanitize(editName)
+        if sample.isBuiltin {
+            VoiceKit.setNickname(name, for: sample)
+        } else {
+            VoiceKit.renameUserFile(resolved, to: name)
+        }
+        model.loadSamples()
     }
 }
