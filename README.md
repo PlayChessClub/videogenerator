@@ -68,7 +68,7 @@ Slash Command / Agent 扩展机制接入。
 
 ## 安装与首次运行
 
-1. 双击 `ClipForge-1.5.0.dmg`，把 ClipForge 拖入「应用程序」。
+1. 双击 `ClipForge-1.6.0.dmg`，把 ClipForge 拖入「应用程序」。
 2. 首次打开若被 Gatekeeper 拦截（ad-hoc 签名，未经苹果公证），右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。
 3. 进入「设置」填入你的 DashScope API Key（阿里云百炼控制台创建，`sk-` 开头），保存后即可使用。
 

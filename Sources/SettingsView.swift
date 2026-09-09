@@ -72,9 +72,15 @@ struct SettingsView: View {
 
                 GlassCard("价目表", subtitle: "华北2（北京）按量付费 · 仅供参考，以官方账单为准") {
                     VStack(alignment: .leading, spacing: 16) {
-                        PriceSection(title: "视频生成", symbol: "film", tint: Pal.purple, rows: PriceList.video)
-                        PriceSection(title: "图片生成", symbol: "photo.on.rectangle", tint: Pal.teal, rows: PriceList.image)
-                        PriceSection(title: "语音", symbol: "waveform", tint: Pal.orange, rows: PriceList.audio)
+                        PriceSection(title: "视频生成", symbol: "film",
+                                     tint: Pal.purple, rows: PriceList.video,
+                                     unitLabel: "元/秒")
+                        PriceSection(title: "图片生成", symbol: "photo.on.rectangle",
+                                     tint: Pal.teal, rows: PriceList.image,
+                                     unitLabel: "元/张")
+                        PriceSection(title: "语音", symbol: "waveform",
+                                     tint: Pal.orange, rows: PriceList.audio,
+                                     unitLabel: "元/万字符 · 按出账")
                     }
                 }
 
@@ -117,11 +123,21 @@ struct ModelRow: View {
 // 价目表分组
 struct PriceSection: View {
     let title: String; let symbol: String; let tint: Color; let rows: [PriceRow]
+    /// 各小节统一单位（如「元/秒」「元/张」）；nil 表示由 row 自带
+    let unitLabel: String?
+    init(title: String, symbol: String, tint: Color, rows: [PriceRow], unitLabel: String? = nil) {
+        self.title = title; self.symbol = symbol; self.tint = tint; self.rows = rows
+        self.unitLabel = unitLabel
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: symbol).foregroundColor(tint)
                 Text(title).font(.subheadline).bold()
+                if let u = unitLabel {
+                    Text("（\(u)）")
+                        .font(.caption).foregroundColor(Pal.muted)
+                }
             }
             VStack(spacing: 0) {
                 ForEach(rows) { r in

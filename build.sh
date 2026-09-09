@@ -5,7 +5,7 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="1.5.0"
+VERSION="1.6.0"
 MIN_OS="11.0"
 BUILD_DIR="build"
 SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
@@ -34,27 +34,37 @@ chmod +x "$APP/Contents/MacOS/$APP_NAME"
 file "$APP/Contents/MacOS/$APP_NAME"
 
 echo "==> [2/6] 生成 Info.plist"
+BUILD_NUMBER=$(($(date +%s) % 100000))
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>$APP_NAME</string>
-  <key>CFBundleDisplayName</key><string>$APP_NAME</string>
-  <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
-  <key>CFBundleVersion</key><string>$VERSION</string>
-  <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleExecutable</key><string>$APP_NAME</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleIconFile</key><string>AppIcon</string>
-  <key>LSMinimumSystemVersion</key><string>$MIN_OS</string>
-  <key>NSHighResolutionCapable</key><true/>
-  <key>NSHumanReadableCopyright</key><string>ClipForge · 基于阿里云 DashScope（cosyvoice-v3.5-plus / wan2.6-i2v）</string>
-  <key>NSAppTransportSecurity</key>
-  <dict>
-    <key>NSAllowsArbitraryLoads</key><true/>
-    <key>NSAllowsArbitraryLoadsForMedia</key><true/>
-  </dict>
+	<key>CFBundleName</key><string>$APP_NAME</string>
+	<key>CFBundleDisplayName</key><string>$APP_NAME</string>
+	<key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
+	<key>CFBundleVersion</key><string>$BUILD_NUMBER</string>
+	<key>CFBundleShortVersionString</key><string>$VERSION</string>
+	<key>CFBundleExecutable</key><string>$APP_NAME</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>LSMinimumSystemVersion</key><string>$MIN_OS</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>基于阿里云 DashScope 多模态模型
+
+· 语音合成：cosyvoice-v3.5-plus
+· 声音克隆：voice-enrollment
+· 文生视频：wan2.6-t2v / wan2.7-t2v
+· 图生视频：wan2.6-i2v / wan2.7-i2v / wan2.6-i2v-flash
+· 文生图：  qwen-image-2.0[-pro] / wan2.7-image[-pro]
+
+© ClipForge · 仅作个人/内部使用</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key><true/>
+		<key>NSAllowsArbitraryLoadsForMedia</key><true/>
+	</dict>
 </dict>
 </plist>
 PLIST
