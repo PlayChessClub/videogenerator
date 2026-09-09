@@ -173,7 +173,7 @@ final class VoiceStudioModel: ObservableObject {
                 speechRate: speechRate, volume: Int(volume), pitch: pitch,
                 instruction: instruction)
             progress = 0.9
-            let dest = FilePicker.outputDir()
+            let dest = FilePicker.outputDir(.audio)
                 .appendingPathComponent("语音_\(Int(Date().timeIntervalSince1970)).mp3")
             try result.audio.write(to: dest)
             lastAudioURL = dest

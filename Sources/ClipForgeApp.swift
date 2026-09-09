@@ -324,10 +324,9 @@ struct FilePicker {
         panel.allowedContentTypes = types
         return panel.runModal() == .OK ? panel.url : nil
     }
-    static func outputDir() -> URL {
-        let base = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("ClipForge", isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        return base
+    /// 某类产物的保存目录：默认系统标准目录（影片/图片/音乐），
+    /// 用户在设置里自定义根文件夹后则存到 <根>/ClipForge/<类型>
+    static func outputDir(_ kind: MediaKind) -> URL {
+        DownloadLocation.shared.dir(for: kind)
     }
 }

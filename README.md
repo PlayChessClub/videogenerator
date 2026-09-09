@@ -68,7 +68,9 @@ ClipForge 的生成功能使用**普通百炼按量付费 API Key**（`sk-` 开�
 
 > pkg 为 ad-hoc 未签名（个人账号无法创建 Developer ID 证书）。首次打开若被 Gatekeeper 拦截：右键 → 打开，或在「系统设置 → 隐私与安全性」点「仍要打开」。
 
-装好后进入「设置」填入 DashScope API Key（百炼控制台创建，`sk-` 开头；**macOS 版存于钥匙串**），即可使用。生成结果默认输出到 `~/Downloads/ClipForge/`。
+装好后进入「设置」填入 DashScope API Key（百炼控制台创建，`sk-` 开头；**macOS 版存于钥匙串**），即可使用。
+
+**产物保存位置**（设置页「下载位置」可自定义）：默认按类型分别落到系统标准目录——视频 `~/Movies/ClipForge`、图片 `~/Pictures/ClipForge`、语音 `~/Music/ClipForge`；点「更改…」选一个根文件夹后，产物改为存到 `<该文件夹>/ClipForge/视频、图片、语音`，可随时「恢复默认」。设置页每行右侧的按钮可在访达中打开对应目录。
 
 ### Windows
 

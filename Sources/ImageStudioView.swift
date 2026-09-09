@@ -60,7 +60,7 @@ final class ImageStudioModel: ObservableObject {
             var saved: [URL] = []
             for (i, u) in urls.enumerated() {
                 guard let remote = URL(string: u) else { continue }
-                let dest = FilePicker.outputDir()
+                let dest = FilePicker.outputDir(.image)
                     .appendingPathComponent("图片_\(Int(Date().timeIntervalSince1970))_\(i+1).png")
                 try await client.download(remote, to: dest)
                 saved.append(dest)

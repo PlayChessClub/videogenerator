@@ -142,7 +142,7 @@ struct TimelineView: View {
 
     private func runExport() {
         busy = true; error = nil; status = "导出中…"
-        let dest = FilePicker.outputDir()
+        let dest = FilePicker.outputDir(.video)
             .appendingPathComponent("成片_\(Int(Date().timeIntervalSince1970)).mp4")
         let plan = ExportEngine.Plan(videos: videoClips.map { $0.url }, mode: mode, dubAudio: dubAudio)
         Task {

@@ -131,7 +131,7 @@ final class VideoStudioModel: ObservableObject {
                 guard let vurl = s.videoUrl, let u = URL(string: vurl) else {
                     throw APIError("返回中没有视频地址")
                 }
-                let dest = FilePicker.outputDir()
+                let dest = FilePicker.outputDir(.video)
                     .appendingPathComponent("视频_\(Int(Date().timeIntervalSince1970)).mp4")
                 try await client.download(u, to: dest)
                 videoLocalURL = dest

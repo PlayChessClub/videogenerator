@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject private var s = AppSettings.shared
+    @ObservedObject private var dl = DownloadLocation.shared
     @State private var revealKey = false
     @State private var savedFlash = false
 
@@ -48,6 +49,40 @@ struct SettingsView: View {
                                  destination: URL(string: "https://bailian.console.aliyun.com/?apiKey=1")!)
                         }
                         Text("提示：在阿里云百炼控制台创建 DashScope API Key（sk- 开头）。更换 Key 后立即生效，无需重启。")
+                            .font(.caption).foregroundColor(Pal.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                GlassCard("下载位置", subtitle: "生成的视频 / 图片 / 语音分目录保存") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(MediaKind.allCases) { k in
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Image(systemName: k.symbol).foregroundColor(k.tint).frame(width: 20)
+                                Text(k.label).font(.caption).foregroundColor(Pal.muted)
+                                    .frame(width: 32, alignment: .leading)
+                                Text(dl.displayPath(for: k))
+                                    .monospacedFont(11).lineLimit(1).truncationMode(.middle).selectableText()
+                                Spacer()
+                                Button { dl.reveal(k) } label: {
+                                    Image(systemName: "arrow.right.circle")
+                                }.glassButton().fixedSize().help("在访达中显示")
+                            }
+                        }
+                        HStack(spacing: 10) {
+                            Button { dl.chooseViaPanel() } label: {
+                                Label("更改…", systemImage: "folder")
+                            }.glassButton(prominent: true)
+                            if dl.isCustom {
+                                Button { dl.resetToDefault() } label: {
+                                    Label("恢复默认", systemImage: "arrow.uturn.left")
+                                }.glassButton()
+                            }
+                            Spacer()
+                        }
+                        Text(dl.isCustom
+                             ? "产物保存到所选文件夹下的 ClipForge / 视频、图片、语音。"
+                             : "默认使用系统标准目录：~/Movies、~/Pictures、~/Music 下的 ClipForge 文件夹。")
                             .font(.caption).foregroundColor(Pal.muted)
                             .fixedSize(horizontal: false, vertical: true)
                     }
