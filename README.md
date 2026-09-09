@@ -1,9 +1,26 @@
-# ClipForge · AI 视频编辑助手
+# ClipForge · AI 多模态创作助手
 
-面向个人创作的多模态生成工具：文生图、文生视频、图生视频、声音克隆 + 语音合成、试试手气 Pro 提示词，后端固定对接**阿里云 DashScope**，API Key 在应用内随时更换。
+面向个人创作的多模态生成工具：文生图、文生视频、图生视频、声音克隆 + 语音合成、试试手气 Pro 提示词。后端固定对接 **阿里云百炼 DashScope**，API Key 在应用内随时更换，费用由你的百炼账户承担。
 
-> - 生成费用由你的 DashScope 账户承担，发起前会弹预计消耗确认（见文末「费用」）。
-> - **macOS 版**为主力发布线（当前 v1.7.3）；Windows / Linux 为 Web 版（当前 v3.2.2），覆盖核心生成功能。
+> 发起任何生成前都会弹「预计消耗确认」，确认后才调用。详见文末「费用」。
+
+---
+
+## 版本与仓库总览（三发布线）
+
+ClipForge 按平台分成三条**独立 git 仓库**维护，互不耦合：
+
+| 版本 | 形态 | 仓库 | 功能覆盖 | 维护状态 |
+|---|---|---|---|---|
+| **macOS（主版本）** | 原生 SwiftUI，通用二进制，.pkg 安装 | [PlayChessClub/videogenerator](https://github.com/PlayChessClub/videogenerator)（本仓库） | 🟢 全功能：核心生成 + 时间线拼接 + 内置音色素材 + 试试手气 Pro | 主力迭代 |
+| **Web / Windows / Linux** | Go + HTML5（Windows WebView2 exe；Linux deb/浏览器） | [PlayChessClub/clipforge-web](https://github.com/PlayChessClub/clipforge-web) | 独立演进，覆盖核心生成 | 单列为独立仓库 |
+| **iOS / iPadOS** | 原生 SwiftUI，Xcode 工程 | [PlayChessClub/ClipForge-ios](https://github.com/PlayChessClub/ClipForge-ios) | 复刻 Mac 核心能力，5 Tab 移动端交互 | 独立仓库 |
+
+- **本仓库（videogenerator）= macOS 原生版**，`web/` 已于早期迁出至 `clipforge-web`；自此本仓库只维护 macOS。
+- 各版本价目、模型、DashScope 对接方式一致；差异见「平台差异」。
+- 维护流程见 [MAINTENANCE.md](MAINTENANCE.md)。
+
+---
 
 ## 一、平台现状
 
@@ -46,7 +63,6 @@
 - 克隆链路：本地素材 → 上传临时 OSS → `createVoice`（云端登记 voice）→ 得到 `voice_id` → 之后每次 `synthesize(text, voiceId:)` 用该云端 voice 合成 mp3；
 - 「删除音色」删除的是云端 voice 记录，不会删除你的本地素材；
 - “为什么本地只有克隆用的素材而没有音色本体”——因为你克隆生成的 voice **存在服务器上（以 voice_id 引用）**，本地本来就不该有它的模型文件；本地你能看到的音频就是素材（①）和合成成品（③）。
-
 
 ### 图像 / 视频
 - **文生图**：同步接口，模型可选 `qwen-image-2.0`（默认）/ `-pro` / `wan2.7-image` / `-pro`，尺寸 / 张数可调。
@@ -131,7 +147,7 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 - 可 `SIGN_APP` / `SIGN_PKG` 环境变量做正式签名，否则 ad-hoc。
 
 ### Web（Windows / Linux）
-已迁至独立仓库 **[clipforge-web](https://github.com/PlayChessClub/clipforge-web)**（Go + HTML5：Windows WebView2 exe；Linux CLI / deb 浏览器）。构建命令看该仓库的 `web/README.md`；本仓库不含 Web 源码。
+已迁至独立仓库 **[clipforge-web](https://github.com/PlayChessClub/clipforge-web)**（Go + HTML5：Windows WebView2 exe；Linux CLI / deb 浏览器）。构建命令看该仓库的 README；本仓库不含 Web 源码。
 
 ---
 
@@ -140,6 +156,7 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 ```
 ./                       # git 仓库根（remote = github.com/PlayChessClub/videogenerator）
 ├── README.md            # 本文档
+├── MAINTENANCE.md       # 维护文档（构建/签名/发布/隐私红线）
 ├── LICENSE              # Apache-2.0
 ├── build.sh             # 仅 macOS
 ├── Tools/               # MakeIcon 等构建辅助
@@ -172,6 +189,18 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 - **单实例记账**：GUI / CLI 同 `bill.jsonl` 同字段。
 - **命名净化**（VoiceKit）：保存 / 重命名文件名清理 `/ :` 与控制字符、重名去重。
 
-## 九、许可
+---
+
+## 九、隐私红线（重要）
+
+- **绝不把含个人信息的文件推上云**：个人邮箱、Apple 开发者 Team ID、API Key、设备 UDID 等不得入库 / 不得推送。
+- API Key 仅存于本机 Keychain / 应用设置，绝不写进源码、README、日志或提交历史。
+- iOS 仓库的 `project.pbxproj` 中 Team ID 以占位符 `YOUR_TEAM_ID` 提交，开发者本地自行填回真实值、**且不提交该值**。
+- 构建产物（`.app` / `.ipa` / `build-ipa/*`、`.template.bak` 备份）已 gitignore，不会上云。
+- 提交前自查：`.env` / `*.key` / `settings.yml` / `settings.dat` 均已在 `.gitignore` 屏蔽。
+
+---
+
+## 十、许可
 
 [Apache License 2.0](LICENSE)。API 相关费用由你的 DashScope 账户承担。
