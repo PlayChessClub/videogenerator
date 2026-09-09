@@ -2,6 +2,7 @@
 build/
 *.dmg
 *.app
+web/release/
 
 # Swift / Xcode
 .DS_Store

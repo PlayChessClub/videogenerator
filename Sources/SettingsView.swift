@@ -116,7 +116,7 @@ struct SettingsView: View {
                         PriceSection(title: "语音", symbol: "waveform",
                                      tint: Pal.orange, rows: PriceList.audio,
                                      unitLabel: "元/万字符 · 按出账")
-                        PriceSection(title: "向量（试试手气 Pro）", symbol: "sparkles",
+                        PriceSection(title: "向量 + 文本生成（试试手气 Pro）", symbol: "sparkles",
                                      tint: Pal.gold, rows: PriceList.vector,
                                      unitLabel: "元/千token")
                     }

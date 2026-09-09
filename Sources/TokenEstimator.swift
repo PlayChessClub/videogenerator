@@ -139,6 +139,27 @@ enum TokenEstimator {
                             detail: "\(model) · \(size) · \(n) 张 · ¥\(rateTrunc(rate))/张")
     }
 
+    /// qwen-plus 单价（元/千 token，华北2北京按量付费，≤128K 非思考模式）
+    static let llmInputPricePerK = 0.00096
+    static let llmOutputPricePerK = 0.0024
+
+    /// 「试试手气 Pro」两阶段合并估算：向量选句 + 文本生成扩写
+    /// - embedTokens：阶段一输入 token（按向量单价）
+    /// - genTokens：阶段二生成 token（按 qwen-plus 输入 + 输出单价，输入按参照句量级估 ~600）
+    static func estimateProTotal(kind: PromptKind, embedTokens: Int, genTokens: Int) -> Estimate {
+        let rate = costTable[FixedModel.embedding]?.priceValue ?? 0.000125
+        let embedAmount = Double(embedTokens) / 1000.0 * rate
+        let genIn = 600   // 指令 + 参照句的输入量级
+        let genAmount = Double(genIn) / 1000.0 * llmInputPricePerK
+            + Double(genTokens) / 1000.0 * llmOutputPricePerK
+        let amount = embedAmount + genAmount
+        let total = embedTokens + genTokens
+        return makeEstimate(model: FixedModel.textGeneration, action: "试试手气 Pro",
+                            tokenEst: total, amount: amount,
+                            detail: "向量选句 ≈\(embedTokens) token（¥0.000125/千）+ "
+                                     + "扩写 \(kind.label) ≤\(genTokens) token（输入 ¥0.00096/千 · 输出 ¥0.0024/千）")
+    }
+
     /// 粗略估算 embedding 输入的 token 数（CJK 按字计、其他按 4 字符 ≈ 1 token）
     static func embeddingTokens(for texts: [String]) -> Int {
         var n = 0

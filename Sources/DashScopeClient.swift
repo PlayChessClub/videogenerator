@@ -314,9 +314,8 @@ final class DashScopeClient {
         try FileManager.default.moveItem(at: tmp, to: dest)
     }
 
-    // MARK: - 通用 POST JSON
+    // MARK: - 文本向量化（qwen3.7-text-embedding-flash）
 
-    @discardableResult
     /// 文本向量化（qwen3.7-text-embedding-flash，单次最多 20 条文本）
     /// 返回：与输入顺序一致的向量数组 + 本次实际计费 token 数（接口未返回则按文本长度估算）
     func embed(texts: [String]) async throws -> (vectors: [[Double]], tokens: Int) {
@@ -344,6 +343,56 @@ final class DashScopeClient {
         }
         let tokens = JSONValue.int(json, ["usage", "total_tokens"]) ?? estimateTokens(texts)
         return (vectors, tokens)
+    }
+
+    // MARK: - 文本生成（qwen-plus，「试试手气 Pro」阶段二：扩充生成）
+    //
+    // 说明：embedding 只能「选句」，扩写由 qwen-plus 完成。
+
+    /// 文本生成（qwen-plus 等）：系统指令 + 用户提示 → 正文
+    /// 返回：生成的文本 + 本次总 token（输入 + 输出）
+    @discardableResult
+    func generateText(model: String, system: String, user: String,
+                      maxTokens: Int, temperature: Double = 0.9) async throws -> (text: String, tokens: Int) {
+        let body: [String: Any] = [
+            "model": model,
+            "input": [
+                "messages": [
+                    ["role": "system", "content": system],
+                    ["role": "user", "content": user],
+                ],
+            ],
+            "parameters": [
+                "result_format": "message",
+                "max_tokens": maxTokens,
+                "temperature": temperature,
+            ],
+        ]
+        let json = try await postJSON(
+            "\(DashScope.httpBase)/services/aigc/text-generation/generation", body: body)
+        // 兼容 output.text 与 output.choices[].message.content 两种返回
+        var text = ""
+        if let out = json["output"] as? [String: Any],
+           let t = JSONValue.string(out, ["text"]), !t.isEmpty {
+            text = t
+        } else if let out = json["output"] as? [String: Any],
+                  let choices = out["choices"] as? [[String: Any]] {
+            for ch in choices {
+                if let msg = ch["message"] as? [String: Any],
+                   let c = msg["content"] as? String, !c.isEmpty {
+                    text += c
+                }
+            }
+        }
+        text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // usage 可能在顶层或 output 下；缺失时按输入长度 + max_tokens 兜底估算
+        let usage = JSONValue.dict(json, "usage") ?? JSONValue.dict(JSONValue.dict(json, "output"), "usage") ?? [:]
+        let inputTokens = JSONValue.int(usage, ["input_tokens"]) ?? 0
+        let outputTokens = JSONValue.int(usage, ["output_tokens"]) ?? 0
+        let total = JSONValue.int(usage, ["total_tokens"]) ?? 0
+        let tokens = total > 0 ? total : (inputTokens + outputTokens > 0 ? inputTokens + outputTokens
+                                                                         : estimateTokens([system, user]) + maxTokens)
+        return (text, tokens)
     }
 
     /// 粗略估算 token 数（中文按字、其他按 4 字符 ≈ 1 token）
