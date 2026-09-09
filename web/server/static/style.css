@@ -225,6 +225,9 @@ a.btn { display: inline-block; text-decoration: none; }
   background: rgba(0, 0, 0, 0.55);
   display: flex; align-items: center; justify-content: center;
 }
+/* 关键:display:flex 是作者样式,会压过浏览器对 [hidden] 的默认 display:none,
+   必须显式写回,否则弹窗从页面加载起就常驻全屏且无法关闭 */
+.overlay[hidden] { display: none; }
 .confirm {
   width: min(420px, 90vw);
   background: #16161f;
