@@ -286,7 +286,24 @@
         <h3>试试手气</h3>
         <p>视频 / 图片生成页一键随机填入精选 Prompt，灵感卡住时点一下就有。</p>
       </div>
+      <div class="card">
+        <span class="icon">🔉</span>
+        <h3>音色素材（macOS）</h3>
+        <p>内置两款中文播音样音（沉稳男 Reed / 标准女 Sandy，系统 TTS 本机合成、无第三方版权）。试听满意可一键作克隆参考；也可「保存副本」把样音或自备 wav/mp3/m4a 放进可自定义的素材文件夹复用、重命名。</p>
+      </div>
     </div>
+  </section>
+
+  <section id="voicewhere">
+    <h2>音色相关的音频都在哪？</h2>
+    <p style="color:var(--muted)">声音流程里其实有三种对象——<b style="color:var(--text)">只有样本素材与合成成品会落到本地，克隆生成的那个“音色”不在本地</b>：</p>
+    <table>
+      <tr><th>对象</th><th>存放位置</th><th>说明</th></tr>
+      <tr><td>① 音色参考素材（克隆输入）</td><td>本地（包内 <code>VoiceSamples/</code>；或「音色素材文件夹」）</td><td>试听 / 上传做克隆的样本人声，不是音色本体。</td></tr>
+      <tr><td>② 已克隆的个性化音色（voice）</td><td>阿里云（你的 DashScope 账户）</td><td>App 只保存其 <code>voice_id</code>；「音色下拉 / 刷新列表」在读云账户。本地不生成可用音色文件。</td></tr>
+      <tr><td>③ 合成出的 mp3 成品</td><td>本地（<code>产物保存/语音</code> 目录）</td><td>选定 voice 朗读后落盘的最终音频。</td></tr>
+    </table>
+    <p class="table-note">克隆链路：本地素材 → 上传 OSS → <code>createVoice</code>（云端登记 voice）→ 得到 <code>voice_id</code> → 之后每次用该云端 voice 合成 mp3。「删除音色」只删云端记录，不动本地素材。</p>
   </section>
 
   <section id="platforms">
