@@ -277,6 +277,17 @@ func uploadLocalFile(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"resource": submitData.Output.Resource})
 }
 
+// probeClipforge 探测 addr 上是否已经是本应用在服务(用于端口被占时的挂靠判断)
+func probeClipforge(base string) bool {
+	c := &http.Client{Timeout: 1500 * time.Millisecond}
+	resp, err := c.Get(base + "/api/config")
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
+
 // 跨平台打开默认浏览器
 func openBrowser(url string) {
 	go func() {
@@ -596,6 +607,12 @@ func main() {
 	// 监听端口(失败立即报错,避免"以为启动了却白等")
 	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
+		// 端口被占:若已是本应用在跑(残留实例),直接唤起 UI 挂靠它,不报错退出
+		if probeClipforge("http://" + listenAddr) {
+			fmt.Fprintln(os.Stderr, "ℹ️ 检测到 ClipForge 已在运行,直接打开它的界面")
+			launchUI("http://" + listenAddr)
+			os.Exit(0) // 关窗即退;后端由先到的实例继续服务
+		}
 		fmt.Fprintln(os.Stderr, "❌ 端口启动失败:", err)
 		os.Exit(1)
 	}
