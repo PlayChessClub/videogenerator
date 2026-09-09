@@ -1,6 +1,7 @@
 # ClipForge Web (Go + HTML5)
 
-> v2.0.0+ 替代旧版 WinUI 3 实现。**零运行时依赖、跨平台、单文件 ~6MB**。
+> v2.0.0+ 替代旧版 WinUI 3 实现。**零运行时依赖、单文件 ~6MB，主要面向 Windows；Linux 亦有 CLI/浏览器产物**。
+> 说明：macOS 请使用原生 SwiftUI 版（仓库根 `build.sh` 产出 ClipForge.app）；本 Web 版**不再把 macOS 列为支持平台**（darwin 上 `--cli / --web` 仅作本地开发调试，不属正式支持）。
 
 ## 怎么跑
 
@@ -14,7 +15,8 @@
 cd web/server
 go run .
 # Windows: 自动弹出内嵌 WebView2(Chromium)应用窗口,关窗即退出
-# macOS/Linux: 自动打开系统浏览器 http://127.0.0.1:8731
+# Linux: 自动打开系统浏览器 http://127.0.0.1:8731（也支持 CLI/桌面图标入口）
+# macOS: 非支持平台——请用原生 ClipForge.app；darwin 强制本服务仅供本地调试
 ```
 
 > Windows 版用 **WebView2**(Edge 的 Chromium 内核)渲染,Win10/Win11 自带运行时,

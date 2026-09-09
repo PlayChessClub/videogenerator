@@ -13,6 +13,8 @@
 | **Windows 11** | Go + HTML5 单文件 exe（内嵌 WebView2），zip | 🟡 核心生成（文生图 / 多模型视频 / 声音克隆 / 语音合成 / 账本 / 价目 / 消耗确认 / 基础本地随机 prompt） |
 | **Linux** | Go + HTML5，deb/zip（CLI 菜单或桌面开浏览器） | 🟡 与 Windows 相同核心范围 |
 
+> 说明：**Web/Go 版不再把 macOS 列为支持平台**——macOS 请用上方原生 SwiftUI 版；darwin 上运行 `web/`（`--cli/--web`）仅为本地开发调试，非正式发布通道。
+
 平台上文中**「macOS 专属」**的差异能力（不随 Web 版发布，见「功能」）：
 - `试试手气 Pro`（embedding 选句 + qwen-plus 扩写两阶段，Web 仅有免费本地随机）
 - 内置音色素材（VoiceKit）与音色素材文件夹
