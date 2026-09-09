@@ -51,6 +51,6 @@ jobs:
           name: clipforge-linux-${{ matrix.arch }}
           path: |
             web/release/clipforge-linux-${{ matrix.arch }}.zip
-            web/release/clipforge_3.2.0_${{ matrix.arch }}.deb
+            web/release/clipforge_3.2.1_${{ matrix.arch }}.deb
           if-no-files-found: error
           retention-days: 14
