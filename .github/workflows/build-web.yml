@@ -59,6 +59,7 @@ jobs:
           go-version: 1.23.x
 
       - name: 编译
+        shell: bash
         working-directory: web/server
         run: |
           go build -ldflags="-s -w" -o ../../clipforge-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} .
