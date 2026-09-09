@@ -10,21 +10,22 @@ AI 视频/图片/语音创作工具，后端固定对接**阿里云 DashScope** 
 | 平台 | 形态 | 状态 |
 |---|---|---|
 | **macOS 11+** | 原生 SwiftUI（arm64 + x86_64 通用二进制），.pkg 安装 | 🟢 主力维护 |
-| **Windows 11** | Go + HTML5 单文件 exe（内嵌 WebView2 窗口），zip 发布 | 🟢 v3.2.0 起功能与 Mac 对齐 |
-| **Linux** | Go + HTML5，deb/zip 发布（**内嵌 webkit2gtk 原生窗口**） | 🟢 v3.2.0 起功能与 Mac 对齐 |
+| **Windows 11** | Go + HTML5 单文件 exe（内嵌 WebView2 窗口），zip 发布 | 🟢 功能与 Mac 对齐 |
+| **Linux** | Go + HTML5，deb/zip 发布（终端跑 CLI 菜单 / 桌面图标开浏览器） | 🟢 功能与 Mac 对齐（v3.2.x 命令行前端） |
 
 - **macOS 版**采用 Liquid Glass 视觉语言：在 macOS 26 上呈现真·液态玻璃材质（`glassEffect`），低版本自动退化为 NSVisualEffectView 毛玻璃。
-- **Windows / Linux 版**为 `web/` 目录下的 Go 单文件方案（v2.0 起取代旧 WinUI 3 实现；`Windows/` 目录已归档，见 `Windows/ARCHIVED.md`）。v3.2.0 起三端功能同步（声音克隆 / 语音合成 / 文生图 / 视频生成多模型 / 账本 / 价目表 / 费用确认）；仅「剪辑时间线」为 macOS 专属（依赖 AVFoundation 本地拼接引擎）。
+- **Windows / Linux 版**为 `web/` 目录下的 Go 单文件方案（v2.0 起取代旧 WinUI 3 实现；`Windows/` 目录已归档，见 `Windows/ARCHIVED.md`）。三端功能同步（声音克隆 / 语音合成 / 文生图 / 视频生成多模型 / 账本 / 价目表 / 费用确认）；仅「剪辑时间线」为 macOS 专属（依赖 AVFoundation 本地拼接引擎）。
+- **Linux 前端路线**（v3.2.1 起）：终端（TTY）运行默认进入**命令行菜单**；桌面图标 / 无 TTY 时自动打开系统浏览器。曾尝试内嵌 webkit2gtk 原生窗口，因虚拟化环境渲染兼容差、维护成本高已移除，回归纯静态无 CGO 构建。
 
 ## 功能
 
 - **声音工作室**：CosyVoice 声音克隆（voice enrollment）+ 文本转语音。支持公网音频 URL 或本地音频上传，音色状态自动轮询，合成参数可调（音量 / 语速 / 音高）。
-- **图片生成**：文生图（同步接口，无需轮询）。模型可选 `qwen-image-2.0`（默认）/ `qwen-image-2.0-pro` / `wan2.7-image` / `wan2.7-image-pro`，尺寸与张数可控，结果自动下载并收录素材库。
+- **图片生成**：文生图（同步接口，无需轮询）。模型可选 `qwen-image-2.0`（默认）/ `qwen-image-2.0-pro` / `wan2.7-image` / `wan2.7-image-pro`，尺寸与张数可控，结果自动下载。
 - **视频生成**：支持文生视频（`wan2.6-t2v` / `wan2.7-t2v`，无需首帧图）与图生视频（`wan2.6-i2v` / `wan2.7-i2v` / `wan2.6-i2v-flash`，需首帧图），模型可切换，异步任务提交 + 自动轮询 + 结果下载。分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关可控（flash 模型无声更省）。
 - **剪辑时间线**（macOS 版）：把生成的视频按顺序拼接导出，支持「保留原声」或「整体替换配音」，纯 AVFoundation 实现。
-- **消费预估值**：发起生成前弹窗提示**预计消耗 token 区间（±30%）** 与**预估金额**，确认后才调用模型。
-- **生成账单**：每次确认生成自动记录一条明细（时间 / 操作 / 模型 / 内容摘要 / 计量单位与数量 / token 区间 / 预估金额 / 任务 ID / 状态），账本存于 `~/Library/Application Support/ClipForge/bill.jsonl`，「账单」页可查看今日/本月/累计汇总，并一键导出 CSV 核对实际扣费。
-- **试试手气**：视频 / 图片生成页提供「🎲 试试手气」，一键随机填入精选 Prompt。
+- **消费预估值**：发起生成前提示**预计消耗 token 区间（±30%）** 与**预估金额**，确认后才调用模型（CLI 中同样确认）。
+- **生成账单**：每次确认生成自动记录一条明细（时间 / 操作 / 模型 / 内容摘要 / 计量单位与数量 / token 区间 / 预估金额 / 任务 ID / 状态），账本存于 `~/Library/Application Support/ClipForge/bill.jsonl`（macOS）/ 平台配置目录 `bill.jsonl`，可查看今日/本月/累计汇总，并一键导出 CSV 核对实际扣费。
+- **试试手气**：视频 / 图片生成提供随机精选 Prompt（CLI 同样支持）。
 
 ## 关于阿里云 Token Plan（重要）
 
@@ -75,14 +76,30 @@ ClipForge 的生成功能使用**普通百炼按量付费 API Key**（`sk-` 开�
 
 ### Linux
 
-推荐 deb 安装（自动补 webkit 依赖）：
+推荐 deb 安装（零 GUI 依赖，仅 `xdg-utils`）：
 
 ```bash
-sudo apt install ./clipforge_3.2.0_amd64.deb    # x64；ARM 设备用 _arm64.deb
-clipforge                                        # 内嵌 webkit 原生窗口,自动打开 127.0.0.1:8731
+sudo apt install ./clipforge_3.2.2_amd64.deb    # x64；ARM 设备用 _arm64.deb
+clipforge                                          # 终端里跑 → 命令行菜单
+clipforge --web                                    # 强制浏览器界面(桌面图标默认此模式)
 ```
 
-免安装 zip 适合桌面环境已带 webkit 的发行版，解压 `./clipforge-linux-amd64` 直接跑；无显示环境（纯服务器）时自动回退打开系统浏览器（或直接 `curl 127.0.0.1:8731` 使用 API）。API Key 明文存于 `~/.config/ClipForge/settings.yml`。
+**命令行前端**（终端里 `clipforge` 即进入，`clipforge -h` 看帮助）：
+
+```
+1. 视频生成    2. 文生图
+3. 语音合成    4. 声音克隆
+5. 我的音色    6. 账本
+7. API Key     8. 打开 Web 界面
+0. 退出
+```
+
+- 视频 5 模型 / 图片 4 模型，带费用估算与确认、自动轮询
+- 生成的视频/图片/语音/账本 CSV **自动保存到系统下载文件夹**（Linux 优先 `xdg-user-dir`，回退 `~/Downloads`，启动横幅会打印实际目录）
+- 语音合成走 WebSocket 实时协议；`API Key` 菜单输入时**终端不回显**
+- 双开 / 残留进程会自动挂靠已有实例，不报错
+
+免安装 zip：解压 `./clipforge-linux-amd64` 直接跑。无显示环境（纯服务器）用 `--web` 会回退打开浏览器或 `curl 127.0.0.1:8731` 使用 API。API Key 明文存于 `~/.config/ClipForge/settings.yml`。
 
 ## 构建
 
@@ -98,14 +115,13 @@ clipforge                                        # 内嵌 webkit 原生窗口,�
 
 ### Web 版（Windows exe / Linux deb）
 
-`web/server` 为 Go 单文件后端（前端 `static/` 已 go:embed 内嵌；依赖已 vendor 进仓库，离线可编）。一键构建脚本：
+`web/server` 为 Go 单文件后端（前端 `static/` 已 go:embed 内嵌；依赖已 vendor 进仓库，离线可编；纯标准库 + gorilla/websocket，**无 CGO**）。一键构建：
 
 ```bash
-python3 web/build-pkgs.py                                  # 本地交叉编译 Windows 双架构 + Linux 静态回退版,出 zip
-python3 web/build-pkgs.py --only linux-amd64 --cgo --deb   # Linux 原生机上编 webkit 窗口版 + deb(需 libwebkit2gtk-4.1-dev)
+python3 web/build-pkgs.py                                  # 本地交叉编译 Windows 双架构 zip
 ```
 
-Linux **原生窗口版**（webkit2gtk，CGO）只能在 Linux 上编译——CI（`.github/workflows/build-web.yml`）用 `ubuntu-24.04` + `ubuntu-24.04-arm` 两个原生 runner 自动出 Linux zip + deb；Windows 在任意平台 `CGO_ENABLED=0` 交叉编译即可。push `v*` tag 或手动 `workflow_dispatch` 触发。
+Linux zip + deb 由 CI（`.github/workflows/build-web.yml`，`ubuntu-24.04` + `ubuntu-24.04-arm` 双原生 runner）在 push `v*` tag 时自动产出并待发布。产物命名与 Release 对齐（`clipforge_3.2.2_amd64.deb` 等，deb 由脚本内 `VERSION` 控制，可用 `CF_VERSION` 环境变量覆盖）。
 
 ## 项目结构
 
@@ -125,20 +141,30 @@ ClipForge/
 │   ├── PriceList.swift / PromptBank.swift
 ├── Tools/                        # MakeIcon.swift（图标生成）等辅助工具
 ├── build.sh                      # macOS 一键构建 .pkg
-├── web/                          # Web 版（Go + HTML5）：build-pkgs.py 一键构建; server/{main.go, webview_*.go, static/, vendor/}; assets/icon-512.png
+├── web/                          # Web 版（Go + HTML5）
+│   ├── build-pkgs.py             # 一键构建脚本（本地 Windows 交叉编译）
+│   ├── assets/icon-512.png       # deb 图标（入库,CI 可用）
+│   └── server/
+│       ├── main.go               # 本地服务 + REST/WS 代理 + 启动分流(CLI/Web)
+│       ├── cli.go                # 命令行前端(全平台,--cli 进入)
+│       ├── cli_term_linux.go     # Linux 终端关回显读 API Key(termios)
+│       ├── webview_win.go        # Windows 内嵌 WebView2 窗口
+│       ├── webview_linux_nocgo.go / webview_other.go  # 其他平台开浏览器
+│       ├── static/               # 前端(index.html/app.js/style.css, 已内嵌)
+│       └── vendor/               # 依赖已 vendor(离线可编,勿删)
 ├── Windows/                      # ⚠️ 已归档的 WinUI 3 实现（不再构建，参考用）
-├── .github/workflows/build-web.yml  # Linux 原生窗口版 CI（ubuntu-24.04 / ubuntu-24.04-arm）
+├── .github/workflows/build-web.yml  # Linux zip/deb CI（ubuntu-24.04 双原生 runner）
 └── LICENSE                       # Apache-2.0
 ```
 
 ## 技术要点
 
 - **Liquid Glass**：SwiftUI `glassEffect(_:in:)` + `.buttonStyle(.glass/.glassProminent)`，配合 Aurora 渐变背景与半透明卡片。
-- **TTS 协议**：DashScope 全双工 WebSocket（`run-task → continue-task → finish-task`，二进制帧累积为 mp3），与官方 Python SDK `SpeechSynthesizer` 行为一致，Swift `URLSessionWebSocketTask` 原生复刻。
+- **TTS 协议**：DashScope 全双工 WebSocket（`run-task → continue-task → finish-task`，二进制帧累积为 mp3），与官方 Python SDK `SpeechSynthesizer` 行为一致；Mac 版 `URLSessionWebSocketTask` 原生复刻，web 版经 `/api/tts/ws`（gorilla/websocket）服务端代理，CLI 用 gorilla 客户端直连同一代理。
 - **OSS 临时上传**：本地图片/音频经 `getPolicy → 表单直传 OSS` 得到 `oss://` 资源，请求头带 `X-DashScope-OssResourceResolve: enable` 供服务端解析。
 - **WebView2 内嵌**（Windows）：`jchv/go-webview2` 把 WebView2Loader 内嵌进 exe，仍是单文件；缺 Runtime 时自动退回系统浏览器。
-- **webkit2gtk 内嵌**（Linux）：`webview/webview_go`（vendor 时 pkg-config 修正为 `webkit2gtk-4.1`，适配 Ubuntu 24.04 / Debian 12+），CGO 构建需 Linux 环境（CI 双原生 runner）；无显示环境自动回退浏览器。
-- **TTS WebSocket 代理**（web 版）：浏览器 ⇄ 本地 Go 服务（`/api/tts/ws`，gorilla/websocket）⇄ DashScope，服务端注入 Authorization，前端不接触 Key；协议与 Mac 版逐帧一致。
+- **启动分流**（web 版）：Linux/终端有 TTY 默认进 CLI 菜单；无 TTY（桌面图标）或 `--web` 起服务 + 开浏览器；`--cli` 强制命令行（darwin 调试亦可用）。端口被占且检测到本应用在跑时自动挂靠已有实例。
+- **单实例记账**：所有生成（GUI/CLI）走同一 `bill.jsonl`，字段同口径，Web 端与 CLI 看到的账本一致。
 
 ## 许可
 
