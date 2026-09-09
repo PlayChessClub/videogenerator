@@ -9,7 +9,6 @@ import AppKit
 final class AppState: ObservableObject {
     static let shared = AppState()
     @Published var selectedTab: RootView.Tab = .voice
-    @Published var showSettings: Bool = false
 }
 
 @main
@@ -80,9 +79,11 @@ private enum MainMenuBuilder {
             m.addItem(make("全选", action: #selector(NSText.selectAll(_:)), key: "a"))
         })
 
-        // ---- 视图（切换 Tab + 打开设置）----
+        // ---- 视图（切换功能 Tab + 打开设置）----
         main.addItem(menu("视图") { m in
-            for (i, tab) in RootView.Tab.allCases.enumerated() {
+            // 功能页 1-5：声音/图片/视频/时间线/账单
+            let funcTabs = RootView.Tab.allCases.filter { $0 != .settings }
+            for (i, tab) in funcTabs.enumerated() {
                 let key = "\(i + 1)"
                 let item = NSMenuItem(title: tab.rawValue, action: #selector(MenuAction.switchTab(_:)), keyEquivalent: key)
                 item.target = MenuAction.shared
@@ -90,6 +91,7 @@ private enum MainMenuBuilder {
                 m.addItem(item)
             }
             m.addItem(.separator())
+            // 设置（⌘,），与顶栏的「设置」胶囊指向同一 tab
             let s = NSMenuItem(title: "设置…", action: #selector(MenuAction.openSettings), keyEquivalent: ",")
             s.target = MenuAction.shared
             m.addItem(s)
@@ -144,12 +146,10 @@ final class MenuAction: NSObject {
         guard let raw = sender.representedObject as? String,
               let tab = RootView.Tab(rawValue: raw) else { return }
         AppState.shared.selectedTab = tab
-        AppState.shared.showSettings = false
     }
 
     @objc func openSettings() {
-        AppState.shared.selectedTab = .voice
-        AppState.shared.showSettings = true
+        AppState.shared.selectedTab = .settings
     }
 
     @objc func showAbout() {
@@ -166,21 +166,15 @@ struct RootView: View {
         ZStack {
             AuroraBackground()
             VStack(spacing: 14) {
-                TopTabBar(
-                    selection: $state.selectedTab,
-                    showSettings: $state.showSettings
-                )
+                TopTabBar(selection: $state.selectedTab)
                 ZStack {
-                    if state.showSettings {
-                        SettingsView().transition(.opacity)
-                    } else {
-                        switch state.selectedTab {
-                        case .voice:    VoiceStudioView().transition(.opacity)
-                        case .image:    ImageStudioView().transition(.opacity)
-                        case .video:    VideoStudioView().transition(.opacity)
-                        case .timeline: TimelineView().transition(.opacity)
-                        case .bill:     BillView().transition(.opacity)
-                        }
+                    switch state.selectedTab {
+                    case .voice:    VoiceStudioView().transition(.opacity)
+                    case .image:    ImageStudioView().transition(.opacity)
+                    case .video:    VideoStudioView().transition(.opacity)
+                    case .timeline: TimelineView().transition(.opacity)
+                    case .bill:     BillView().transition(.opacity)
+                    case .settings: SettingsView().transition(.opacity)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -200,6 +194,7 @@ extension RootView {
         case video = "视频生成"
         case timeline = "剪辑时间线"
         case bill = "账单"
+        case settings = "设置"
         var id: String { rawValue }
         var symbol: String {
             switch self {
@@ -208,24 +203,21 @@ extension RootView {
             case .video:    return "film"
             case .timeline: return "scissors"
             case .bill:     return "yensign.circle"
+            case .settings: return "gearshape"
             }
         }
     }
 }
 
-/// 顶部自绘玻璃 TabBar：呼吸空间 + 容器阴影 + 选中态高亮 + 右侧齿轮进设置
+/// 顶部自绘玻璃 TabBar（v1.5 布局）：所有功能页 + 设置 平铺成一条等高铁轨胶囊
 private struct TopTabBar: View {
     @Binding var selection: RootView.Tab
-    @Binding var showSettings: Bool
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(RootView.Tab.allCases) { tab in
                 Button {
-                    withAnimation(.easeOut(duration: 0.18)) {
-                        selection = tab
-                        showSettings = false
-                    }
+                    withAnimation(.easeOut(duration: 0.18)) { selection = tab }
                 } label: {
                     HStack(spacing: 7) {
                         Image(systemName: tab.symbol).font(.system(size: 13, weight: .medium))
@@ -251,31 +243,6 @@ private struct TopTabBar: View {
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
             }
-            Spacer(minLength: 8)
-            Button {
-                withAnimation(.easeOut(duration: 0.18)) { showSettings = true }
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(8)
-                    .foregroundColor(showSettings ? .white : .primary.opacity(0.78))
-                    .background(
-                        Group {
-                            if showSettings {
-                                Capsule().fill(Pal.purple)
-                            } else {
-                                Capsule().fill(Color.primary.opacity(0.05))
-                            }
-                        }
-                    )
-                    .overlay(
-                        Capsule().strokeBorder(
-                            showSettings ? Color.clear : Color.primary.opacity(0.08),
-                            lineWidth: 0.5)
-                    )
-            }
-            .buttonStyle(.plain)
-            .help("设置（⌘,）")
         }
         .padding(6)
         .background(tabBarBackground)
