@@ -17,8 +17,9 @@ ClipForge 按平台分成三条**独立 git 仓库**维护，互不耦合：
 | **iOS / iPadOS** | 原生 SwiftUI，Xcode 工程 | [PlayChessClub/ClipForge-ios](https://github.com/PlayChessClub/ClipForge-ios) | 复刻 Mac 核心能力，5 Tab 移动端交互 | 独立仓库 |
 
 - **本仓库（videogenerator）= macOS 原生版**，`web/` 已于早期迁出至 `clipforge-web`；自此本仓库只维护 macOS。
+- 仓库内 `ios/` 是**早期 swiftc 版 iOS 尝试（历史遗留，不再维护）**；iOS 正式实现见独立仓库 [ClipForge-ios](https://github.com/PlayChessClub/ClipForge-ios)。
 - 各版本价目、模型、DashScope 对接方式一致；差异见「平台差异」。
-- 维护流程见 [MAINTENANCE.md](MAINTENANCE.md)。
+- 维护流程**不在本仓库**：构建/签名/发布/隐私操作手册以《`ClipForgeAI维护指南-<时间戳>.md`》形式保存在本仓库**父目录**（不入 git）。
 
 ---
 
@@ -156,7 +157,6 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 ```
 ./                       # git 仓库根（remote = github.com/PlayChessClub/videogenerator）
 ├── README.md            # 本文档
-├── MAINTENANCE.md       # 维护文档（构建/签名/发布/隐私红线）
 ├── LICENSE              # Apache-2.0
 ├── build.sh             # 仅 macOS
 ├── Tools/               # MakeIcon 等构建辅助
