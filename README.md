@@ -43,8 +43,8 @@ ClipForge 按平台分成三条**独立 git 仓库**维护，互不耦合：
 ## 二、功能
 
 ### 声音
-- **声音克隆（voice enrollment）**：贴公网 URL 或用本地音频上传克隆个性音色，`target_model=cosyvoice-v3.5-plus`，任务自动轮询状态。
-- **语音合成**：文本 → mp3，可调音量 / 语速 / 音高。
+- **声音克隆（voice enrollment）**：贴公网 URL 或用本地音频上传克隆个性音色，克隆模型与合成模型一致（默认 `cosyvoice-v3.5-plus`，可选列表见下），任务自动轮询状态。
+- **语音合成**：文本 → mp3，可调音量 / 语速 / 音高；**模型下拉可选**（价格升序）：`cosyvoice-v3.5-flash`（¥0.8/万字符，实惠）· `cosyvoice-v3.5-plus`（¥1.5，旗舰默认）· `cosyvoice-v3-plus`（¥2.0，专业）· `cosyvoice-v2`（¥2.0，预置音色最多）。
 - **音色素材**（macOS v1.7.3+，见 `Sources/VoiceKit.swift`）：
   - 内置示例：两款随包带的中文播音样音（沉稳播音男 Reed / 标准播音女 Sandy，源自 macOS 系统 TTS 本机合成，无第三方版权，随 pkg 装在 `VoiceSamples/`）。
   - 每枚可**试听**、可一键“用作克隆参考”（走本地上传→OSS→clone）；可「保存副本」把样音按昵称复制到素材夹，甚至重命名。
@@ -67,8 +67,7 @@ ClipForge 按平台分成三条**独立 git 仓库**维护，互不耦合：
 
 ### 图像 / 视频
 - **文生图**：同步接口，模型可选 `qwen-image-2.0`（默认）/ `-pro` / `wan2.7-image` / `-pro`，尺寸 / 张数可调。
-- **文生视频**：`wan2.6-t2v` / `wan2.7-t2v`，仅凭 prompt。
-- **图生视频**：`wan2.6-i2v` / `wan2.7-i2v` / `wan2.6-i2v-flash`（flash 无声更省），异步提交 + 自动轮询。
+- **视频生成**：**模型下拉可选**（价格升序，附一句话优势提示）：`wan2.6-i2v-flash`（无声低至 ¥0.15/秒）· `wan2.6-t2v` / `wan2.6-i2v` / `wan2.7-t2v` / `wan2.7-i2v`（¥0.6–1.0/秒）。t2v 仅凭 prompt，i2v 需首帧图；异步提交 + 自动轮询。
 - 分辨率 / 时长 / 单多镜头 / prompt 扩写 / 音轨开关均可控。
 
 ### 剪辑（macOS 专属）
@@ -94,16 +93,15 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 
 ---
 
-## 四、固定模型与价目（仅供参考，以官方账单为准）
+## 四、模型与价目（仅供参考，以官方账单为准）
 
-### 模型清单
+### 模型清单（自 s.3.2 起，语音合成 / 视频生成均可在页面下拉选择，价格升序）
 
 | 能力 | 模型标识 |
 |---|---|
-| 语音合成 | `cosyvoice-v3.5-plus` |
-| 声线克隆 | `voice-enrollment`（→ cosyvoice） |
-| 文生视频 | `wan2.6-t2v` / `wan2.7-t2v` |
-| 图生视频 | `wan2.6-i2v` · `wan2.7-i2v` · `wan2.6-i2v-flash` |
+| 语音合成（可选） | `cosyvoice-v3.5-flash` · `cosyvoice-v3.5-plus`（默认） · `cosyvoice-v3-plus` · `cosyvoice-v2` |
+| 声线克隆 | `voice-enrollment`（→ 与所选合成模型一致） |
+| 视频生成（可选） | `wan2.6-i2v-flash` · `wan2.6-t2v` · `wan2.6-i2v`（默认） · `wan2.7-t2v` · `wan2.7-i2v` |
 | 文本生成（Pro 扩写） | `qwen-plus`（输入 ¥0.00096/千 · 输出 ¥0.0024/千） |
 | 文本向量（Pro 选句） | `qwen3.7-text-embedding-flash`（¥0.000125/千 token） |
 
@@ -115,7 +113,9 @@ ClipForge 只用**普通百炼按量付费 Key**（`sk-` 开头，dashscope.aliy
 | 文生图 `qwen-image-2.0-pro` / `wan2.7-image-pro` | ¥0.50 / 张 |
 | 视频 `wan2.6-t2v/i2v`·`wan2.7-t2v/i2v` | 720P ¥0.6/s · 1080P ¥1.0/s |
 | 视频 `wan2.6-i2v-flash` | 有声 720P ¥0.3/s · 1080P ¥0.5/s；无声减半 |
+| 语音合成 `cosyvoice-v3.5-flash` | ¥0.8 / 万字符 |
 | 语音合成 `cosyvoice-v3.5-plus` | ¥1.5 / 万字符 |
+| 语音合成 `cosyvoice-v3-plus` / `cosyvoice-v2` | ¥2.0 / 万字符 |
 
 > 华北2（北京）按量付费口径（应用设置页内嵌价目同一份）。Token 区间为换算展示，非精确计量。
 
