@@ -40,3 +40,6 @@ ios/ClipForgeCore/.build/
 ios/build_ios/
 ios/**/*.xcodeproj/
 
+
+# GitHub 令牌本地文件（绝不入库）
+ghkey.yml

@@ -15,6 +15,7 @@ final class VoiceStudioModel: ObservableObject {
 
     // 合成参数
     @Published var text: String = "大家好，欢迎来到我的频道，今天我们来聊聊人工智能如何改变视频创作。"
+    @Published var ttsModel: String = FixedModel.ttsDefault
     @Published var selectedVoice: String = ""
     @Published var volume: Double = 50
     @Published var speechRate: Double = 1.0
@@ -77,7 +78,7 @@ final class VoiceStudioModel: ObservableObject {
         busy = true; status = "提交音色克隆请求…"
         defer { busy = false }
         do {
-            let vid = try await client.createVoice(targetModel: FixedModel.tts, prefix: prefix, url: url)
+            let vid = try await client.createVoice(targetModel: ttsModel, prefix: prefix, url: url)
             newVoiceId = vid
             status = "已提交，正在轮询状态…"
             await pollUntilReady(vid: vid)
@@ -101,10 +102,10 @@ final class VoiceStudioModel: ObservableObject {
         status = "上传参考音频到临时 OSS…"
         defer { busy = false }
         do {
-            let oss = try await client.uploadToOSS(model: FixedModel.tts, fileURL: f)
+            let oss = try await client.uploadToOSS(model: ttsModel, fileURL: f)
             cloningURL = oss
             status = "提交音色克隆请求…"
-            let vid = try await client.createVoice(targetModel: FixedModel.tts, prefix: prefix, url: oss)
+            let vid = try await client.createVoice(targetModel: ttsModel, prefix: prefix, url: oss)
             newVoiceId = vid
             status = "已提交，正在轮询状态…"
             await pollUntilReady(vid: vid)
@@ -152,7 +153,7 @@ final class VoiceStudioModel: ObservableObject {
         let voice = selectedVoice.isEmpty ? newVoiceId : selectedVoice
         if voice.isEmpty { error = "请先选择或创建一个音色"; return }
         if text.trimmingCharacters(in: .whitespaces).isEmpty { error = "请输入要合成的文本"; return }
-        let est = TokenEstimator.estimateTTS(text: text)
+        let est = TokenEstimator.estimateTTS(text: text, model: ttsModel)
         confirm.confirmAndRun(est) { [weak self] in
             await self?.performSynthesize(voice: voice)
         }
@@ -161,9 +162,9 @@ final class VoiceStudioModel: ObservableObject {
     // MARK: - 账单记录
 
     private func recordTTSBill() {
-        let est = TokenEstimator.estimateTTS(text: text)
+        let est = TokenEstimator.estimateTTS(text: text, model: ttsModel)
         let entry = BillEntry(
-            action: "语音合成", model: FixedModel.tts,
+            action: "语音合成", model: ttsModel,
             summary: String(text.prefix(60)),
             unitName: "字符", unitCount: text.count,
             tokenMin: est.tokenMin, tokenMax: est.tokenMax,
@@ -190,6 +191,7 @@ final class VoiceStudioModel: ObservableObject {
         do {
             let result = try await CosyVoiceTTS.synthesize(
                 text: text, voiceId: voice, apiKey: AppSettings.shared.apiKey,
+                model: ttsModel,
                 speechRate: speechRate, volume: Int(volume), pitch: pitch,
                 instruction: instruction)
             progress = 0.9
@@ -221,8 +223,13 @@ struct VoiceStudioView: View {
                 }
 
                 GlassCard("第一步 · 创建克隆音色",
-                          subtitle: "固定模型 \(FixedModel.tts)｜参考音频需公网可访问") {
+                          subtitle: "参考音频需公网可访问｜克隆模型与下方合成模型保持一致") {
                     VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            Text("克隆模型").font(.caption).foregroundColor(Pal.muted)
+                            ttsModelPicker(model: $m.ttsModel)
+                            Spacer()
+                        }
                         TextField("粘贴参考音频 URL（如官方示例 .wav）", text: $m.cloningURL)
                             .textFieldStyle(.plain)
                             .padding(10).glassField
@@ -281,6 +288,14 @@ struct VoiceStudioView: View {
 
                 GlassCard("第二步 · 文本转语音") {
                     VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Text("合成模型").font(.caption).foregroundColor(Pal.muted)
+                            ttsModelPicker(model: $m.ttsModel)
+                            Spacer()
+                        }
+                        if let info = FixedModel.modelInfo(m.ttsModel) {
+                            Text(info.merits).font(.caption).foregroundColor(Pal.muted)
+                        }
                         HStack {
                             Text("音色").font(.caption).foregroundColor(Pal.muted)
                             if m.voices.isEmpty {
@@ -332,6 +347,20 @@ struct VoiceStudioView: View {
             TokenConfirmOverlay(model: m.confirm, title: "语音/克隆")
         }
     }
+}
+
+// MARK: - TTS 模型选择器（价格升序）
+
+@ViewBuilder
+func ttsModelPicker(model: Binding<String>) -> some View {
+    Picker("", selection: model) {
+        ForEach(FixedModel.ttsModels) { mo in
+            Text("\(mo.id) · \(mo.priceText)").tag(mo.id)
+        }
+    }
+    .labelsHidden()
+    .pickerStyle(.menu)
+    .frame(maxWidth: 300, alignment: .leading)
 }
 
 struct LabeledSlider: View {

@@ -86,14 +86,17 @@ enum TokenEstimator {
         return t[idx]
     }
 
-    /// 估算一次语音合成（文本 → mp3）
-    static func estimateTTS(text: String) -> Estimate {
+    /// 估算一次语音合成（文本 → mp3），单价随所选模型
+    static func estimateTTS(text: String, model: String = FixedModel.ttsDefault) -> Estimate {
         let chars = text.count
-        let amount = Double(chars) / 10000.0 * (costTable[FixedModel.tts]?.priceValue ?? 1.5)
-        let tokenEst = Int(Double(chars) / 10000.0 * (costTable[FixedModel.tts]?.tokenPerUnit ?? 15_000))
-        return makeEstimate(model: FixedModel.tts, action: "语音合成",
+        let price = FixedModel.ttsPricePer10k(model)
+        let amount = Double(chars) / 10000.0 * price
+        // token 当量随单价比例缩放（旗舰 1.5 ↔ 1.5 万/万字符）
+        let tokenPerUnit = 15_000.0 * price / 1.5
+        let tokenEst = Int(Double(chars) / 10000.0 * tokenPerUnit)
+        return makeEstimate(model: model, action: "语音合成",
                             tokenEst: tokenEst, amount: amount,
-                            detail: "输入 \(chars) 字符 · ¥1.5/万字符")
+                            detail: "输入 \(chars) 字符 · ¥\(rateTrunc(price))/万字符")
     }
 
     /// 估算一次视频生成（文生视频 t2v / 图生视频 i2v 统一入口）

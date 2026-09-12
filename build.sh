@@ -6,11 +6,21 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="1.7.3"
+VERSION="s.3.2"
 MIN_OS="11.0"
 BUILD_DIR="build"
-SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
-DEV_DIR=/Library/Developer/CommandLineTools
+# SwiftUI 的宏插件(libSwiftUIMacros.dylib)只在 Xcode 的 platform 插件目录里，
+# CommandLineTools 没有，且两者 Swift 版本可能不一致(宏 dylib ABI 不匹配会报
+# "type 'State<Value>' has no member '_makeStorage_v0'")。
+# 因此优先用 Xcode 工具链；机器上没有 Xcode 时才回退 CLT。
+if [ -d "/Applications/Xcode.app/Contents/Developer" ]; then
+  DEV_DIR=/Applications/Xcode.app/Contents/Developer
+  SDK=$(xcrun --sdk macosx --show-sdk-path 2>/dev/null)
+  [ -d "$SDK" ] || SDK=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+else
+  DEV_DIR=/Library/Developer/CommandLineTools
+  SDK=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+fi
 APP="$BUILD_DIR/$APP_NAME.app"
 
 # 可选正式签名：机器有 Developer ID 证书时通过环境变量传入，否则 ad-hoc

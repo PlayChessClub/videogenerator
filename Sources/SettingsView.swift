@@ -132,12 +132,12 @@ struct SettingsView: View {
                             LabeledValue("WebSocket", DashScope.wsBase)
                         }
                     }
-                    GlassCard("固定模型（不可更改）", subtitle: "锁定以下模型以保证兼容性") {
+                    GlassCard("模型选择", subtitle: "语音合成与视频生成可在各工作室下拉选择；文生图与音色复刻为固定模型") {
                         VStack(spacing: 8) {
-                            ModelRow(symbol: "photo.on.rectangle", tint: Pal.teal, name: "文生图", model: FixedModel.imageModels[0])
-                            ModelRow(symbol: "waveform.circle.fill", tint: Pal.teal, name: "语音合成", model: FixedModel.tts)
-                            ModelRow(symbol: "video.fill", tint: Pal.purple, name: "图生视频", model: FixedModel.videoI2V)
-                            ModelRow(symbol: "person.crop.circle.badge.checkmark", tint: Pal.orange, name: "音色复刻", model: FixedModel.voiceEnrollment)
+                            ModelRow(symbol: "photo.on.rectangle", tint: Pal.teal, name: "文生图（固定）", model: FixedModel.imageModels[0])
+                            ModelRow(symbol: "waveform.circle.fill", tint: Pal.teal, name: "语音合成（可选，默认）", model: FixedModel.ttsDefault)
+                            ModelRow(symbol: "video.fill", tint: Pal.purple, name: "视频生成（可选，默认）", model: FixedModel.videoI2V)
+                            ModelRow(symbol: "person.crop.circle.badge.checkmark", tint: Pal.orange, name: "音色复刻（固定）", model: FixedModel.voiceEnrollment)
                         }
                     }
                 }
