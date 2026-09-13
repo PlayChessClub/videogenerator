@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 
 APP_NAME="ClipForge"
 BUNDLE_ID="com.clipforge.app"
-VERSION="s.3.2"
+VERSION="s.8.1"
 MIN_OS="11.0"
 BUILD_DIR="build"
 # SwiftUI 的宏插件(libSwiftUIMacros.dylib)只在 Xcode 的 platform 插件目录里，
